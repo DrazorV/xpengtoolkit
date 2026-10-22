@@ -10,6 +10,8 @@ Also runs the module's own embedded self-test.
 
 from __future__ import annotations
 
+# Load the stdlib module before the component directory can shadow it.
+import calendar  # noqa: F401
 import json
 import os
 import pathlib

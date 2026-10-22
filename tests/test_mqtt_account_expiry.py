@@ -20,6 +20,8 @@ takes precedence.
 from __future__ import annotations
 
 import importlib.util
+# Load the stdlib module before the component directory can shadow it.
+import calendar  # noqa: F401
 import json
 import pathlib
 import sys
