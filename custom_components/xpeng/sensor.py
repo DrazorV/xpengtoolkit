@@ -24,6 +24,8 @@ from . import poll_status
 from .const import DOMAIN, SENSOR_DESCRIPTIONS, XPengSensorEntityDescription
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
+from .entity_layout import include_legacy_entity
+from .command_policy import default_policy
 from .xpeng_errors import command_response_message
 from .vin_descriptor import mask_vin
 
@@ -61,13 +63,17 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up XPENG sensor entities."""
-    coordinator: XPengDataCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: XPengDataCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     entities: list[SensorEntity] = [
         XPengSensor(coordinator, description)
         for description in SENSOR_DESCRIPTIONS
+        if include_legacy_entity(
+            entry,
+            getattr(coordinator, "command_policy", None) or default_policy(),
+            "sensor",
+            description.key,
+        )
     ]
 
     # Add diagnostic sensors
