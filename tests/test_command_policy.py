@@ -509,7 +509,7 @@ class TestEveryCommandIsGated(unittest.TestCase):
                     )
         # 30 command methods, plus climate's mode setter, which delegates to
         # the two guarded methods above rather than guarding itself.
-        self.assertEqual(checked, 31, "a command method appeared or vanished")
+        self.assertEqual(checked, 33, "a command method appeared or vanished")
 
         # And the list above must cover every file that can command the car:
         # a new platform calling the MQTT client directly would otherwise be
@@ -694,6 +694,19 @@ class TestGate(unittest.TestCase):
                 hass, _Call(user_id="u1"), "unlock", policy.GROUP_ACCESS, p
             )
         )
+
+    def test_targeted_schedule_needs_control_on_the_selected_vehicle(self):
+        hass = _Hass(user=_User(is_admin=False, allowed=["climate.car_a"]),
+                     entity_ids=["climate.car_a", "climate.car_b"])
+        hass.entity_registry.async_get = hass.entity_registry.entities.get
+        call = _Call(user_id="u1")
+        call.data = {"vehicle_entity_id": "climate.car_b"}
+        p = policy.CommandPolicy.from_preset(policy.PRESET_FULL)
+        with self.assertRaises(Unauthorized):
+            _run(gate.async_guard_service(hass, call, "create_hvac_schedule", policy.GROUP_COMFORT, p))
+        call.data = {"vehicle_entity_id": "climate.car_a"}
+        _run(gate.async_guard_service(hass, call, "create_hvac_schedule", policy.GROUP_COMFORT, p))
+
 
     def test_admin_passes_without_any_entity_grant(self):
         hass = _Hass(user=_User(is_admin=True), entity_ids=["lock.car"])

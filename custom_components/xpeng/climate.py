@@ -23,6 +23,7 @@ from .climate_commands import (
     power_payload,
     send_climate,
     temperature_payload,
+    temperature_bounds,
     temperature_step,
 )
 from .command_policy import GROUP_COMFORT, default_policy
@@ -101,6 +102,20 @@ class XPengClimate(XPengEntity, ClimateEntity):
     def target_temperature(self) -> float | None:
         value = self._temperature("hvac_temp_float")
         return value if value is not None else self._temperature("hvac_temp")
+
+    @property
+    def min_temp(self) -> float:
+        return temperature_bounds(self.coordinator)[0]
+
+    @property
+    def max_temp(self) -> float:
+        return temperature_bounds(self.coordinator)[1]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if temperature_bounds(self.coordinator) == (15.5, 32.5):
+            return {"temperature_extremes": {"LO": 15.5, "HI": 32.5}}
+        return {}
 
     @property
     def target_temperature_step(self) -> float:

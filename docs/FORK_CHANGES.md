@@ -140,3 +140,18 @@ longer advertises fan control and the legacy number refuses that payload until
 a valid remote fan command is identified. This corrects the 0.7.1 fan claim;
 raw fan telemetry remains available. Other models and climate actions still
 require physical validation. No app sources, captures or credentials are included.
+
+
+## 0.7.4b1 — app climate modes and schedule management (test build)
+
+Adds seven independent, capability-gated measured switches: maximum heating,
+maximum cooling, Refresh, Sterilisation, A/C cleaning, rear defrost and Pet mode.
+Each combines on/off in one entity. Pet telemetry's checking state is preserved
+as unknown; command acknowledgements do not create optimistic success.
+Vehicle-scoped schedule actions now surface errors and refresh measured state.
+The companion reusable card 0.1.4 adds the mode grid and schedule editor.
+
+The owner's app resources and SDK establish the mappings. Physical validation
+of these new switches through Home Assistant remains pending. The 0.7.3
+on/off and 22 C validation still applies. Existing unique IDs, evcc interfaces,
+credential handling and the renewal app version are unchanged.

@@ -504,5 +504,22 @@ class TestTheListenerDoesNotFlood(unittest.TestCase):
         self.assertGreater(coordinator.LISTENER_UPDATE_INTERVAL, 0)
 
 
+class TestPetModeResponseUpdatesMeasuredState(unittest.TestCase):
+    def test_pet_status_uses_its_own_section_without_advancing_snapshot_time(self):
+        original = _cached_state()
+        original["timestamp"] = 123
+        original["msg_content"]["instant"]["protectMode"] = {"protect_mode_status": 0}
+        coord = _coordinator_with(original)
+        ack = {"service_type": 33, "code": 200, "content": {"protect_mode_status": 1}}
+        self.assertTrue(coord._merge_command_state(ack))
+        self.assertEqual(coord._last_full_data["msg_content"]["instant"]["protectMode"], {"protect_mode_status": 1})
+        self.assertEqual(coord._last_full_data["timestamp"], 123)
+        self.assertEqual(original["msg_content"]["instant"]["protectMode"]["protect_mode_status"], 0)
+        ack["content"]["protect_mode_status"] = 2
+        ack["code"] = 8
+        self.assertFalse(coord._merge_command_state(ack))
+        self.assertEqual(coord._last_full_data["msg_content"]["instant"]["protectMode"]["protect_mode_status"], 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

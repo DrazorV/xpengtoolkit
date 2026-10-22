@@ -15,3 +15,6 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements-test.txt
       - run: python tools/run_tests.py
+
+      - name: Run reusable vehicle card tests
+        run: node lovelace/xpeng-vehicle-card/test-card.cjs

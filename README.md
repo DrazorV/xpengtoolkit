@@ -255,6 +255,11 @@ outlet and unlocking are absent until you widen it.
 
 ### Climate protocol and feedback
 
+Independent app modes use one measured switch each, including maximum heating/
+cooling, cleaning, rear defrost and Pet mode. Optional support follows each car’s
+capabilities; unsupported controls are disabled. Schedule services can target a
+specific vehicle, report errors and refresh the calendar after edits.
+
 Climate power and target temperature use the official app's capability-selected
 commands. Vehicle replies update measured climate state; refusals and timeouts
 are reported as errors. The former fan-speed mapping is withheld because it

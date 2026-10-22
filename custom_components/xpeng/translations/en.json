@@ -599,6 +599,27 @@
       },
       "charging": {
         "name": "Charging"
+      },
+      "climate_max_heating": {
+        "name": "Maximum heating"
+      },
+      "climate_max_cooling": {
+        "name": "Maximum cooling"
+      },
+      "climate_refresh": {
+        "name": "Refresh"
+      },
+      "climate_sterilisation": {
+        "name": "Sterilisation"
+      },
+      "climate_ac_cleaning": {
+        "name": "A/C cleaning"
+      },
+      "climate_rear_defrost": {
+        "name": "Rear window defroster"
+      },
+      "climate_pet_mode": {
+        "name": "Pet mode"
       }
     },
     "number": {
@@ -734,6 +755,9 @@
     "invalid_climate_option": {
       "message": "Unsupported climate setting: {option}."
     },
+    "pet_mode_rear_seat_reminder": {
+      "message": "Pet mode cannot be enabled remotely while Rear Seat Reminder is enabled in the vehicle (code {code})."
+    },
     "vehicle_command_rejected": {
       "message": "The vehicle rejected the command (code {code}). Check the vehicle state and command feedback for details."
     },
@@ -748,6 +772,9 @@
     },
     "fan_speed_unverified": {
       "message": "Remote fan-speed control has not been verified for this vehicle."
+    },
+    "climate_mode_unavailable": {
+      "message": "{mode} is not confirmed as supported by this vehicle."
     }
   }
 }

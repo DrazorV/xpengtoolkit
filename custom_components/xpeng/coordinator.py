@@ -77,6 +77,7 @@ COMMAND_STATE_SECTIONS = {
     CHARGE_SERVICE_TYPE: "charge",
     SEAT_SERVICE_TYPE: "seat",
     12: "window",
+    33: "protectMode",  # Pet mode: 0=off, 1=checking, 2=on.
 }
 
 #: How often the MQTT listener may fire its event and refresh entities, in seconds.
