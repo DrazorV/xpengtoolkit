@@ -13,6 +13,7 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from .climate_commands import power_payload, send_climate, temperature_payload
 from .charge_port import controls_enabled
 from .command_gate import async_guard_service
 from .command_policy import default_policy, service_group
@@ -305,15 +306,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     """Register XPENG vehicle command services."""
 
     async def handle_climate_on(call: ServiceCall) -> None:
-        temp = call.data.get("temperature", 22.0)
-        duration = call.data.get("duration", 15)
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 6, "cmd_value": temp, "time": duration}
+        data = _get_entry_data(hass)
+        if not data:
+            raise HomeAssistantError("No live XPENG config entry")
+        c, client = data["coordinator"], data["mqtt_client"]
+        try:
+            target = temperature_payload(
+                c, call.data.get("temperature", 22.0), call.data.get("duration", 15)
+            )
+        except (TypeError, ValueError, OverflowError):
+            raise HomeAssistantError("Invalid climate target temperature") from None
+        await send_climate(hass, client, c, target)
+        await send_climate(
+            hass, client, c, power_payload(c, True, call.data.get("duration", 15))
         )
 
     async def handle_climate_off(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 1, "cmd_value": 0, "time": 0}
+        data = _get_entry_data(hass)
+        if not data:
+            raise HomeAssistantError("No live XPENG config entry")
+        await send_climate(
+            hass, data["mqtt_client"], data["coordinator"],
+            power_payload(data["coordinator"], False),
         )
 
     async def handle_close_windows(call: ServiceCall) -> None:

@@ -216,12 +216,9 @@ class XPengChargeLimit(XPengEntity, NumberEntity):
 
 
 class XPengFanSpeed(XPengEntity, NumberEntity):
-    """Number to set HVAC fan speed / air volume level.
+    """Legacy fan entity retained for registry compatibility; commands unverified."""
 
-    Discovered 2026-06-14 via probing: service_type 3, cmd_type 2, cmd_value=level
-    (val 0 is rejected as 'air volume could not be adjusted' — use climate_off to stop).
-    """
-
+    _attr_entity_registry_enabled_default = False
     _policy_group = GROUP_COMFORT
     _attr_name = "Fan speed"
     _attr_icon = "mdi:fan"
@@ -251,9 +248,7 @@ class XPengFanSpeed(XPengEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         self._guard()
-        level = int(value)
-        await self.hass.async_add_executor_job(
-            self._mqtt_client.send_command,
-            self._vin, 3,
-            {"cmd_type": 2, "cmd_value": level},
+        # Service 3 / command 2 is temperature in the official app, not fan speed.
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="fan_speed_unverified"
         )

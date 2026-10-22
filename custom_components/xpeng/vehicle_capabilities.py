@@ -44,6 +44,7 @@ HARDWARE_KEYS = frozenset(
 )
 LOCAL_KEYS = frozenset(
     {
+        "isSupportAcAutoMode",
         "isSupportChargePortControl",
         "isSupportOneChargePort",
         "isSeatDoubleCheck",

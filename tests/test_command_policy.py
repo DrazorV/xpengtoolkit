@@ -518,7 +518,8 @@ class TestEveryCommandIsGated(unittest.TestCase):
             path.name
             for path in PKG.glob("*.py")
             if "self._mqtt_client.send_command" in path.read_text()
-            or ("await async_send_confirmed(" in path.read_text()
+            or (("await async_send_confirmed(" in path.read_text()
+                 or "await send_climate(" in path.read_text())
                 and "self._guard(" in path.read_text())
         )
         self.assertEqual(

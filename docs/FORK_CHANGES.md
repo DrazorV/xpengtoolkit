@@ -119,3 +119,24 @@ the renewal app version and credential handling are unchanged.
 
 Upstream 0.6.22 history is merged through PR #6. PR #7 preserves evcc interfaces,
 including the old climate binary sensor, in compact mode.
+
+
+## 0.7.3 — verified climate power and temperature
+
+Climate power and target temperature now follow the official app's distinct
+commands and vehicle capability flags. The previous target payload used the
+quick-cooling command, producing rejection code 8. Fractional temperature and
+optional duration follow the reported capabilities; integer-only cars use the
+integer-temperature command. Native temperature changes do not power on A/C;
+the explicit climate-on service sets its target before starting.
+
+The P7+ owner physically confirmed power on, power off and a 22 C target with
+0.7.3b1 on 22 October 2026. Rejections and timeouts now raise errors, and measured
+HVAC responses update state without optimistic success or a false full-snapshot
+timestamp. Existing entity IDs and evcc interfaces are preserved.
+
+The old fan-speed mapping sent the integer-temperature command. Climate no
+longer advertises fan control and the legacy number refuses that payload until
+a valid remote fan command is identified. This corrects the 0.7.1 fan claim;
+raw fan telemetry remains available. Other models and climate actions still
+require physical validation. No app sources, captures or credentials are included.

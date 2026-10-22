@@ -253,6 +253,13 @@ a group that is Disabled is not created at all, and one that is Read only keeps 
 state but refuses its commands. A new install starts at **Safe Plus**, so OTA, the V2L
 outlet and unlocking are absent until you widen it.
 
+### Climate protocol and feedback
+
+Climate power and target temperature use the official app's capability-selected
+commands. Vehicle replies update measured climate state; refusals and timeouts
+are reported as errors. The former fan-speed mapping is withheld because it
+uses the integer-temperature command. See [climate command corrections](docs/CLIMATE_COMMANDS.md).
+
 ### Notifications
 
 XPENG's notifications do **not** arrive over MQTT and are not pushed to this
