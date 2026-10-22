@@ -1104,9 +1104,15 @@ class XPengRemoteCapabilitiesSensor(XPengEntity, SensorEntity):
         caps = data.get("capabilities") if isinstance(data, dict) else data
         if not isinstance(caps, list):
             return {"raw": data}
+        from .vehicle_capabilities import from_coordinator
+
+        features = from_coordinator(self.coordinator)
         return {
             "count": len(caps),
             "capabilities": caps,
+            "hardware": features.hardware,
+            "model_configuration": features.local,
+            "feature_support": features.decisions(),
         }
 
 

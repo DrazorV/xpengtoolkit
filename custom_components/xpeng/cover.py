@@ -14,10 +14,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .charge_port import charge_port_state
+from .charge_port import charge_port_state, controls_enabled
+from .command_execution import async_send_confirmed
 from .command_policy import GROUP_ACCESS, GROUP_CHARGING, GROUP_SECURING, default_policy
 from .const import DOMAIN
 from .entity import XPengEntity
+from .vehicle_capabilities import from_coordinator
 
 
 async def async_setup_entry(
@@ -30,7 +32,7 @@ async def async_setup_entry(
             data["coordinator"],
             data["mqtt_client"],
             key,
-            charge_port_controls=entry.options.get("charge_port_controls", True),
+            charge_port_controls=controls_enabled(entry.options),
         )
         for key in ("trunk", "windows", "charge_port")
     ]
@@ -72,8 +74,8 @@ class XPengCover(XPengEntity, CoverEntity):
         self._open_group = GROUP_CHARGING if key == "charge_port" else GROUP_ACCESS
         self._close_group = GROUP_CHARGING if key == "charge_port" else GROUP_SECURING
         self._policy_groups = (self._open_group, self._close_group)
-        # Protocol values are the existing integration's commands. No new
-        # position percentages or fabricated motion/stop commands are advertised.
+        # Window commands match XPENG Android 3.12.0 MqttSendHandler.
+        # Its openWindow action is ventilation; full opening is not advertised.
         self._open_command = {
             "trunk": (9, {"cmd_type": 2, "cmd_value": 1}),
             "windows": (12, {"cmd_type": 1, "cmd_value": 2}),
@@ -81,7 +83,7 @@ class XPengCover(XPengEntity, CoverEntity):
         }[key]
         self._close_command = {
             "trunk": (9, {"cmd_type": 2, "cmd_value": 3}),
-            "windows": None,
+            "windows": (12, {"cmd_type": 1, "cmd_value": 1}),
             "charge_port": (4, {"cmd_type": 3, "cmd_value": 0}),
         }[key]
 
@@ -90,9 +92,17 @@ class XPengCover(XPengEntity, CoverEntity):
         return data.get("msg_content", {}).get("instant", {})
 
     @property
+    def _can_control(self) -> bool:
+        return self._controls_enabled and (
+            self._key != "charge_port"
+            or from_coordinator(self.coordinator).support("charge_port_control")
+            is not False
+        )
+
+    @property
     def supported_features(self) -> CoverEntityFeature:
         features = CoverEntityFeature(0)
-        if not self._controls_enabled:
+        if not self._can_control:
             return features
         if self._policy.allows(self._open_group):
             features |= CoverEntityFeature.OPEN
@@ -138,24 +148,20 @@ class XPengCover(XPengEntity, CoverEntity):
             return {
                 "window_positions_closed_percent": self._window_positions(),
                 "open_behavior": "ventilation",
-                "close_supported": False,
+                "close_supported": True,
             }
         return {}
 
     async def _async_send(self, command) -> None:
-        if not self._controls_enabled:
+        if not self._can_control:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="charge_port_control_disabled",
             )
         service_type, content = command
-        sent = await self.hass.async_add_executor_job(
-            self._mqtt_client.send_command, self._vin, service_type, content, 2
+        await async_send_confirmed(
+            self.hass, self._mqtt_client, self._vin, service_type, content
         )
-        if not sent:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="command_not_sent"
-            )
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         self._guard(group=self._open_group)

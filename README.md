@@ -932,14 +932,11 @@ battery and is only used to pull a fresh full state; with it off the integration
 strictly passive and sends queries only, at the price of staler sensors. The internal
 watchdog honours it too, degrading to a passive query instead of a force-upload.
 
-**Window and charge-port commands follow what has actually been verified.**
-`Open windows` and `Vent windows` both send the one window command observed to work,
-which *vents* the windows; `Close windows` refuses with a clear error instead of
-publishing its old payload, because that payload was the charge-port *open* command
-and never moved a window (measured on a P7+). `Close windows` requires the XPENG app
-or the vehicle until a verified close command is captured. For a car with a manual
-charge flap, turn off **Motorized charge-port controls**: the open/close charge-port
-buttons and services are then not offered, while the port state sensor remains.
+**Window and charge-port controls are separate.** Window opening vents. The
+0.7.2 release uses the official app's service-12 close command. A P7+ owner
+confirmed physical ventilation and closing on 22 October 2026. Full opening and arbitrary positions are not advertised.
+Manual charge flaps retain state without motorized commands when known from
+model configuration or when the owner turns off **Motorized charge-port controls**.
 
 ### What this does *not* protect against
 
@@ -1008,9 +1005,13 @@ a charging switch. Duplicate state sensors are folded into their controllers.
 Upgraded entries keep legacy entities until the owner turns off **Keep legacy
 buttons and duplicate sensors** in Configure, after migrating automations. See
 [fork changes and protocol limitations](docs/FORK_CHANGES.md#070--consolidated-controllers).
-On the observed P7+, the window open action vents; window closing remains
-unavailable until its correct command is verified. Manual charge-flap owners can
-disable motorized charge-port actions while retaining state feedback.
+On the observed P7+, the window open action vents. Release 0.7.2 adds the
+official app's close command; both actions were physically confirmed on a P7+
+on 22 October 2026. Manual charge flaps
+retain state without motorized actions when model configuration identifies them.
+Optional seat and sentinel controls use software, hardware and model capability
+data. Unknown support keeps the previous defaults. See the
+[command inventory and capability rules](docs/COMMAND_RESEARCH.md).
 
 Compact mode keeps the old climate **binary sensor** and the other telemetry,
 charge-limit and wake interfaces required by evcc. The native climate controller

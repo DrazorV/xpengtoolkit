@@ -26,6 +26,7 @@ from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
 from .entity_layout import include_legacy_entity
 from .mqtt_client import XPengMQTTClient
+from .vehicle_capabilities import from_coordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,8 +75,8 @@ async def async_setup_entry(
             group=GROUP_SECURING,
             name="Close windows",
             icon="mdi:car-door",
-            service_type=4,
-            msg_content={"cmd_type": 3, "cmd_value": 1},
+            service_type=12,
+            msg_content={"cmd_type": 1, "cmd_value": 1},
         ),
         XPengCommandButton(
             coordinator,
@@ -208,6 +209,7 @@ async def async_setup_entry(
     # with nothing, and a button that looks like it worked is worse than no
     # button. The port state sensor is unaffected.
     charge_port_controls = controls_enabled(entry.options)
+    charge_port_controls = charge_port_controls and from_coordinator(coordinator).support("charge_port_control") is not False
     async_add_entities(
         [
             entity
@@ -255,14 +257,6 @@ class XPengCommandButton(XPengEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         self._guard(self._policy_action)
-        if self._attr_translation_key == "close_windows":
-            # There is no verified window-close command. The payload this button
-            # used to send is the *charge-port* open command, so pressing it
-            # could only ever do the wrong thing; refuse loudly instead of
-            # publishing it (measured on a P7+, 2026-10-22).
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="window_command_unverified"
-            )
         sent = await self.hass.async_add_executor_job(
             self._mqtt_client.send_command,
             self._vin,

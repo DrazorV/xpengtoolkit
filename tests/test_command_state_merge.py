@@ -50,6 +50,7 @@ _component.assert_is_default_target()
 
 # -- a Home Assistant just big enough to import coordinator.py -------------
 
+
 class _CoordinatorBase:
     """Stand-in for DataUpdateCoordinator (subscriptable, never constructed)."""
 
@@ -203,9 +204,8 @@ class TestAChargeAckUpdatesTheState(unittest.TestCase):
         coord = _coordinator_with(_cached_state())
         coord._merge_command_state(_charge_ack(max_range_charge=95))
 
-        value = (
-            coord._last_full_data["msg_content"]["instant"]["charge"]
-            .get("max_range_charge")
+        value = coord._last_full_data["msg_content"]["instant"]["charge"].get(
+            "max_range_charge"
         )
         self.assertEqual(value, 95)
 
@@ -227,6 +227,35 @@ class TestAChargeAckUpdatesTheState(unittest.TestCase):
         self.assertEqual(
             cached["msg_content"]["instant"]["charge"]["max_range_charge"], 90
         )
+
+
+class TestWindowFeedback(unittest.TestCase):
+    def test_window_positions_merge_without_advancing_snapshot_time(self):
+        original = _cached_state()
+        original["timestamp"] = 123
+        coord = _coordinator_with(original)
+        body = {
+            f"{side}_window_position": value
+            for side, value in (
+                ("front_left", 90),
+                ("front_right", 90),
+                ("rear_left", 82),
+                ("rear_right", 82),
+            )
+        }
+        ack = {"service_type": 12, "code": 200, "content": {"code": 200, **body}}
+        self.assertTrue(coord._merge_command_state(ack))
+        self.assertEqual(
+            coord._last_full_data["msg_content"]["instant"]["window"], body
+        )
+        self.assertEqual(coord._last_full_data["timestamp"], 123)
+        self.assertNotIn("window", original["msg_content"]["instant"])
+        self.assertEqual(
+            coord._last_full_data["msg_content"]["instant"]["charge"],
+            original["msg_content"]["instant"]["charge"],
+        )
+        ack["code"] = 8
+        self.assertFalse(coord._merge_command_state(ack))
 
 
 class TestWhatIsNotMerged(unittest.TestCase):
@@ -372,9 +401,8 @@ class TestASeatPushUpdatesTheState(unittest.TestCase):
         coord = _coordinator_with(_cached_state())
         coord._merge_command_state(_seat_ack(**LIVE_SEAT_ACK))
 
-        value = (
-            coord._last_full_data["msg_content"]["instant"]["seat"]
-            .get("left_rear_seat_heat")
+        value = coord._last_full_data["msg_content"]["instant"]["seat"].get(
+            "left_rear_seat_heat"
         )
         self.assertEqual(value, 1)
 
@@ -399,7 +427,9 @@ class TestASeatPushUpdatesTheState(unittest.TestCase):
         """The direction that matters for switching a seat off from HA."""
         coord = _coordinator_with(_cached_state())
         coord._merge_command_state(_seat_ack(**LIVE_SEAT_ACK))
-        coord._merge_command_state(_seat_ack(**{**LIVE_SEAT_ACK, "left_rear_seat_heat": 0}))
+        coord._merge_command_state(
+            _seat_ack(**{**LIVE_SEAT_ACK, "left_rear_seat_heat": 0})
+        )
 
         seat = coord._last_full_data["msg_content"]["instant"]["seat"]
         self.assertEqual(seat["left_rear_seat_heat"], 0)

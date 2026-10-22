@@ -110,9 +110,17 @@ def state(**instant):
 
 class CoverTests(unittest.IsolatedAsyncioTestCase):
     def make(self, key, data=None, p=None, **kwargs):
-        client = SimpleNamespace(send_command=Mock(return_value=True))
+        client = SimpleNamespace(
+            send_command_wait=Mock(
+                return_value={
+                    "service_type": {"trunk": 9, "windows": 12, "charge_port": 4}[key],
+                    "msg_type": 1,
+                    "msg_content": {"code": 200},
+                }
+            )
+        )
         e = cover.XPengCover(coordinator(data, p), client, key, **kwargs)
-        return e, client.send_command
+        return e, client.send_command_wait
 
     async def test_trunk_open_close_use_existing_commands_and_wait_for_report(self):
         e, send = self.make("trunk", state(tail={"tail_status": 0}))
@@ -143,24 +151,25 @@ class CoverTests(unittest.IsolatedAsyncioTestCase):
                 await method()
         send.assert_not_called()
 
-    async def test_failed_publication_is_reported(self):
+    async def test_unconfirmed_command_is_reported(self):
         e, send = self.make("trunk", state(tail={"tail_status": 0}))
-        send.return_value = False
+        send.return_value = None
         with self.assertRaises(Error) as exc:
             await e.async_open_cover()
-        self.assertEqual(exc.exception.key, "command_not_sent")
+        self.assertEqual(exc.exception.key, "command_not_confirmed")
         self.assertTrue(e.is_closed)
 
-    async def test_window_vent_is_verified_but_close_never_targets_charge_port(self):
+    async def test_window_vent_and_close_never_target_charge_port(self):
         e, send = self.make("windows")
-        self.assertEqual(e.supported_features, Feature.OPEN)
+        self.assertEqual(e.supported_features, Feature.OPEN | Feature.CLOSE)
         await e.async_open_cover()
         send.assert_called_once_with(VIN, 12, {"cmd_type": 1, "cmd_value": 2}, 2)
         self.assertEqual(e.extra_state_attributes["open_behavior"], "ventilation")
-        with self.assertRaises(Error) as exc:
-            await e.async_close_cover()
-        self.assertEqual(exc.exception.key, "window_command_unverified")
-        self.assertEqual(send.call_count, 1)
+        await e.async_close_cover()
+        send.assert_called_with(VIN, 12, {"cmd_type": 1, "cmd_value": 1}, 2)
+        self.assertEqual(send.call_count, 2)
+        self.assertTrue(e.extra_state_attributes["close_supported"])
+        self.assertTrue(all(call.args[1] == 12 for call in send.call_args_list))
 
     def test_windows_do_not_invent_closed_state_when_data_is_missing(self):
         e, _ = self.make("windows")
@@ -192,6 +201,17 @@ class CoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(exc.exception.key, "charge_port_control_disabled")
         send.assert_not_called()
 
+    async def test_model_detected_manual_port_keeps_state_but_blocks_motion(self):
+        e, send = self.make("charge_port", state(charge={"slow_charge_port_status": 0}))
+        e.coordinator.vehicle_type_code = "FJ"
+        e.coordinator.vehicle_type_name = "F57a"
+        self.assertTrue(e.is_closed)
+        self.assertEqual(e.supported_features, 0)
+        with self.assertRaises(Error) as exc:
+            await e.async_open_cover()
+        self.assertEqual(exc.exception.key, "charge_port_control_disabled")
+        send.assert_not_called()
+
     async def test_motorized_port_uses_existing_pair_and_keeps_connected_detail(self):
         e, send = self.make(
             "charge_port",
@@ -206,10 +226,16 @@ class CoverTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ChargingTests(unittest.IsolatedAsyncioTestCase):
-    async def test_switch_uses_measured_state_and_validates_publication(self):
-        send = Mock(return_value=True)
+    async def test_switch_uses_measured_state_and_validates_acceptance(self):
+        send = Mock(
+            return_value={
+                "service_type": 4,
+                "msg_type": 1,
+                "msg_content": {"code": 200},
+            }
+        )
         c = coordinator()
-        e = switch.XPengChargingSwitch(c, SimpleNamespace(send_command=send))
+        e = switch.XPengChargingSwitch(c, SimpleNamespace(send_command_wait=send))
         self.assertIsNone(e.is_on)
         c.data = state(charge={"charging_state": 0})
         self.assertFalse(e.is_on)
@@ -225,7 +251,7 @@ class ChargingTests(unittest.IsolatedAsyncioTestCase):
             }
         }
         self.assertTrue(e.is_on)
-        send.return_value = False
+        send.return_value = None
         with self.assertRaises(Error):
             await e.async_turn_off()
         send.assert_called_with(VIN, 4, {"cmd_type": 1, "cmd_value": 0}, 2)
@@ -234,6 +260,77 @@ class ChargingTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(Error):
             await e.async_turn_on()
         self.assertEqual(send.call_count, count)
+
+    async def test_rejection_is_visible_and_does_not_turn_charging_on(self):
+        send = Mock(
+            return_value={
+                "service_type": 4,
+                "msg_type": 1,
+                "msg_content": {"code": 10401},
+            }
+        )
+        e = switch.XPengChargingSwitch(
+            coordinator(state(charge={"charging_state": 0})),
+            SimpleNamespace(send_command_wait=send),
+        )
+        with self.assertRaises(Error) as exc:
+            await e.async_turn_on()
+        self.assertEqual(exc.exception.key, "charging_start_rejected")
+        self.assertFalse(e.is_on)
+        self.assertEqual(e.extra_state_attributes["charging_state"], "Disconnected")
+        self.assertFalse(e.extra_state_attributes["cable_connected"])
+
+    async def test_malformed_response_is_not_acceptance(self):
+        responses = [
+            False,
+            {},
+            {"service_type": 12, "msg_type": 1, "msg_content": {"code": 200}},
+            {"service_type": 4, "msg_type": 2, "msg_content": {"code": 200}},
+            {"service_type": 4, "msg_type": 1, "msg_content": {"code": True}},
+            {"service_type": 4, "msg_type": 1, "msg_content": "bad"},
+        ]
+        for response in responses:
+            e = switch.XPengChargingSwitch(
+                coordinator(),
+                SimpleNamespace(send_command_wait=Mock(return_value=response)),
+            )
+            with self.subTest(response=response), self.assertRaises(Error) as exc:
+                await e.async_turn_off()
+            self.assertEqual(exc.exception.key, "command_response_invalid")
+
+    async def test_charge_flap_rejection_is_not_mislabeled_as_session_start(self):
+        e, send = CoverTests.make(self, "charge_port")
+        send.return_value = {
+            "service_type": 4,
+            "msg_type": 1,
+            "msg_content": {"code": 10401},
+        }
+        with self.assertRaises(Error) as exc:
+            await e.async_open_cover()
+        self.assertEqual(exc.exception.key, "vehicle_command_rejected")
+
+    async def test_same_subsystem_commands_wait_their_turn(self):
+        started, release = asyncio.Event(), asyncio.Event()
+        seen = []
+
+        async def executor(fn, *args):
+            seen.append(args[2]["cmd_value"])
+            started.set()
+            await release.wait()
+            return {"service_type": 4, "msg_type": 1, "msg_content": {"code": 200}}
+
+        e = switch.XPengChargingSwitch(
+            coordinator(), SimpleNamespace(send_command_wait=Mock())
+        )
+        e.hass.async_add_executor_job = executor
+        first = asyncio.create_task(e.async_turn_on())
+        await started.wait()
+        second = asyncio.create_task(e.async_turn_off())
+        await asyncio.sleep(0)
+        self.assertEqual(seen, [1])
+        release.set()
+        await asyncio.gather(first, second)
+        self.assertEqual(seen, [1, 0])
 
 
 class LayoutTests(unittest.TestCase):
@@ -394,12 +491,10 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
         await buttons.async_setup_entry(h, entry(True), entities.extend)
         by_key = {e._attr_translation_key: e for e in entities}
         self.assertIn("open_trunk", by_key)
-        with self.assertRaises(Error) as exc:
-            await by_key["close_windows"].async_press()
-        self.assertEqual(exc.exception.key, "window_command_unverified")
-        send.assert_not_called()
+        await by_key["close_windows"].async_press()
+        send.assert_called_with(VIN, 12, {"cmd_type": 1, "cmd_value": 1}, 2)
         await by_key["vent_windows"].async_press()
-        send.assert_called_once_with(VIN, 12, {"cmd_type": 1, "cmd_value": 2}, 2)
+        send.assert_called_with(VIN, 12, {"cmd_type": 1, "cmd_value": 2}, 2)
         compact = []
         await buttons.async_setup_entry(h, entry(False), compact.extend)
         self.assertEqual(
@@ -438,11 +533,10 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
             compile(ast.Module(body=nodes, type_ignores=[]), "window_services", "exec"),
             ns,
         )
-        with self.assertRaises(Error):
-            await ns["handle_close_windows"](None)
-        send.assert_not_called()
+        await ns["handle_close_windows"](None)
+        send.assert_called_with(h, 12, {"cmd_type": 1, "cmd_value": 1})
         await ns["handle_vent_windows"](None)
-        send.assert_called_once_with(h, 12, {"cmd_type": 1, "cmd_value": 2})
+        send.assert_called_with(h, 12, {"cmd_type": 1, "cmd_value": 2})
 
     async def test_partial_options_preserve_credentials_policy_and_wake_limit(self):
         from typing import Any

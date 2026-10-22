@@ -87,3 +87,35 @@ the defrost/none presets use the existing cmd-type-4 command. Both report measur
 telemetry, reject invalid choices and surface publication failure. Read-only mode
 withdraws all climate features and direct calls remain guarded. Legacy mode keeps
 the old fan/defrost entities; the expected full compact count is now 101.
+
+
+## 0.7.2 — window closing, charging feedback and feature discovery
+
+The window cover and legacy window-close service/button use the official
+Android app's service 12, cmd_type 1, cmd_value 1. Opening remains ventilation,
+not full opening. A P7+ owner physically confirmed ventilation and closing
+using the 0.7.2b1 integration build on 22 October 2026.
+Successful window responses update measured positions without advancing the
+full-state freshness clock or fabricating motion.
+
+Covers and the charging switch wait for a vehicle acknowledgement. A rejection,
+timeout or malformed reply raises a translated error. Rejection 10401 identifies
+a charging-start failure and suggests checking the cable and charging station.
+The existing charging start/stop encodings are unchanged. Charging state and
+cable presence are exposed on the switch.
+
+Feature discovery combines software flags, allowlisted hardware booleans,
+explicit model facts and a read-only cloud model overlay. Known unsupported
+seat/sentinel controls are disabled through the registry; existing IDs/history
+and user/config-entry disabling remain intact. Integration-disabled optional
+controls become enabled when support is known. Manual charge flaps keep their
+cover state without motor actions. Missing/failed discovery is unknown; charger
+readiness and rejection codes are never used as permanent capability evidence.
+
+See [the derived command inventory](COMMAND_RESEARCH.md) for 97 app MQTT handler
+actions, source limitations and unresolved operations. It does not expose new
+untested operations as controls. The renewal app's shared error module is synced;
+the renewal app version and credential handling are unchanged.
+
+Upstream 0.6.22 history is merged through PR #6. PR #7 preserves evcc interfaces,
+including the old climate binary sensor, in compact mode.
