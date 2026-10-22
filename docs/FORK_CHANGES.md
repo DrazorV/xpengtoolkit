@@ -155,3 +155,21 @@ The owner's app resources and SDK establish the mappings. Physical validation
 of these new switches through Home Assistant remains pending. The 0.7.3
 on/off and 22 C validation still applies. Existing unique IDs, evcc interfaces,
 credential handling and the renewal app version are unchanged.
+
+
+## 0.7.5 — bundled dashboard card
+
+- Ship the existing card 0.1.6 inside the HACS integration directory. The card
+  source has one canonical copy in `custom_components/xpeng/www/`; its isolated
+  JavaScript tests remain in `lovelace/xpeng-vehicle-card/`.
+- Register its static file and module resource automatically at integration
+  setup. Hash the shipped asset in an executor to refresh browser caches on
+  updates; register only once for multiple vehicles and integration reloads.
+- Migrate the exact legacy local resource URL in place, preserving its ID and
+  dashboard configurations. Remove duplicate registrations of this card only.
+  YAML-managed resources load through the frontend API without rewriting YAML.
+- Frontend failures are logged without preventing vehicle setup. Headless
+  installations skip card registration. Minimum Home Assistant is 2024.7 for
+  its asynchronous static-path registration API.
+- Vehicle commands, entity IDs, evcc interfaces and card behavior are unchanged,
+  including mandatory trunk-open confirmation and immediate closing.

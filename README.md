@@ -262,6 +262,18 @@ turned off. evcc's original climate binary sensor and other typed interfaces
 remain available in compact mode. See [controls and migration](docs/CONTROLS.md),
 [evcc compatibility](docs/EVCC.md) and [protocol research](docs/COMMAND_RESEARCH.md).
 
+### Reusable dashboard card
+
+From fork release **0.7.5**, the **XPENG Vehicle** card is included with the
+integration. Update or install through HACS, restart Home Assistant, refresh the
+browser, then use **Edit dashboard → Add card → XPENG Vehicle** in any dashboard.
+The integration registers one shared resource and updates its browser-cache URL
+when the bundled JavaScript changes. Existing manually installed storage-mode
+resources migrate automatically; existing dashboard cards keep their settings.
+See the [card guide](lovelace/xpeng-vehicle-card/README.md) for YAML resources,
+multiple cars, manual installation and supported controls. No separate dashboard
+or sidebar page is created. Requires Home Assistant 2024.7 or later.
+
 ### Climate protocol and feedback
 
 Independent app modes use one measured switch each, including maximum heating/
@@ -344,7 +356,7 @@ Two behaviours worth knowing before you rely on this:
 
 ## Requirements
 
-- Home Assistant 2024.6 or newer
+- Home Assistant 2024.7 or newer
 - A **dedicated** XPENG account - see below
 - The integration's **mTLS certificates**, which you extract yourself - see
   [`custom_components/xpeng/certs/README.md`](custom_components/xpeng/certs/README.md).

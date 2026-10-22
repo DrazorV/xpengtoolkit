@@ -13,5 +13,6 @@
     "paho-mqtt>=1.6.1",
     "cryptography>=42.0.0"
   ],
-  "version": "0.7.4"
+  "after_dependencies": ["frontend", "lovelace"],
+  "version": "0.7.5"
 }

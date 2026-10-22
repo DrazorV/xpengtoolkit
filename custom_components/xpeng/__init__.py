@@ -559,7 +559,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Register integration-level services (once, not per entry).
+    """Register integration-level services and the card (once, not per entry).
 
     ``xpeng.import_credentials`` exists so a renewal can be driven from an
     automation or a script instead of a human clicking Fix on the Repairs card: it
@@ -576,6 +576,10 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         SERVICE_IMPORT_CREDENTIALS,
         async_import_credentials,
     )
+
+    from .frontend import async_setup_card
+
+    await async_setup_card(hass)
 
     if hass.services.has_service(DOMAIN, SERVICE_IMPORT_CREDENTIALS):
         return True

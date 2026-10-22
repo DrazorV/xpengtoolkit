@@ -4,9 +4,33 @@ A standalone Lovelace card for the XPENG Toolkit integration. No extra cards, de
 
 The visual direction comes from the [official XPENG app screenshots](https://play.google.com/store/apps/details?id=com.xiaopeng.globalcarinfo): pale blue vehicle backdrop, prominent range, restrained icons and green accents. This is an independent Home Assistant card.
 
-## Install
+## Install with the integration (0.7.5 and later)
 
-Copy `xpeng-vehicle-card.js` to `/config/www/xpeng-vehicle-card/`. Register a **JavaScript module** resource:
+The card is bundled in the integration at
+[`custom_components/xpeng/www/xpeng-vehicle-card.js`](../../custom_components/xpeng/www/xpeng-vehicle-card.js).
+Install or update **DrazorV/xpengtoolkit** through HACS, restart Home Assistant,
+then refresh your browser. In any dashboard, select **Edit dashboard → Add card →
+XPENG Vehicle**. No separate card repository, file copy or resource registration
+is needed. No dashboard or sidebar page is created.
+
+Integration updates also update the card. Its resource URL contains a hash of
+the shipped JavaScript, so changed files get a fresh browser cache URL. Multiple
+vehicles share one resource; add a separate card for each vehicle.
+
+Existing storage-managed `/local/xpeng-vehicle-card/xpeng-vehicle-card.js`
+resources migrate automatically, preserving one resource ID and removing exact
+duplicates. Existing dashboard card configurations stay valid. The old file in
+`www/xpeng-vehicle-card/` is left untouched; it can be removed after migration.
+
+YAML-managed resource lists are left untouched: the integration loads the bundled
+module through Home Assistant's frontend API. Remove an old manually configured
+XPENG card resource from YAML once to avoid also loading the old copy. Refresh
+the browser after that change. Other card resources are unaffected.
+
+### Manual card installation (older integrations)
+
+Download the JavaScript from the path above and copy it to
+`/config/www/xpeng-vehicle-card/`. Register a **JavaScript module** resource:
 
 ```text
 /local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.6
@@ -57,4 +81,4 @@ Roles are the keys in `ROLES` near the top of the JavaScript file, plus `driver_
 
 Run `node test-card.cjs`. These isolated tests stub the Home Assistant connection; they never issue real car commands. Visual verification should include a phone-width and a desktop-width view and each tab. Do not test physical actions without the owner's involvement.
 
-Bump the resource's `?v=` value when updating JavaScript so browsers fetch the new file. Existing open sessions may need a refresh. To remove the card, delete its dashboard/card, then unregister its resource and remove the copied directory. The integration and its entities remain independent.
+Bundled installations update the cache URL automatically; refresh open browser sessions after an integration update. For manual installations, bump the resource's `?v=` value when updating JavaScript. To stop using the card, remove it from your dashboard. If uninstalling the integration, also remove its XPENG card resource from Settings → Dashboards → Resources (and any legacy copied directory). Vehicle entities and dashboard card configuration are managed independently.
