@@ -25,6 +25,7 @@ from .command_policy import (
 from .const import DOMAIN
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
+from .entity_layout import include_legacy_entity
 from .mqtt_client import XPengMQTTClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,6 +49,11 @@ async def async_setup_entry(
         XPengTrunkPowerSwitch(coordinator, mqtt_client),
         XPengDefrostSwitch(coordinator, mqtt_client),
         XPengParkingLightsSwitch(coordinator, mqtt_client),
+    ]
+    entities = [
+        entity for entity in entities
+        if not isinstance(entity, XPengDefrostSwitch)
+        or include_legacy_entity(entry, policy, "switch", "defrost_switch")
     ]
     # A switch keeps a meaningful state under READ_ONLY (X-Guard armed, defrost
     # on), so READ_ONLY creates it and only DISABLED removes it; the command

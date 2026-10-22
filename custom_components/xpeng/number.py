@@ -20,6 +20,7 @@ from .command_policy import (
 from .const import DOMAIN
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
+from .entity_layout import include_legacy_entity
 from .mqtt_client import XPengMQTTClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,6 +43,11 @@ async def async_setup_entry(
         XPengTrunkPowerTimer(coordinator, mqtt_client),
         XPengChargeLimit(coordinator, mqtt_client),
         XPengFanSpeed(coordinator, mqtt_client),
+    ]
+    entities = [
+        entity for entity in entities
+        if not isinstance(entity, XPengFanSpeed)
+        or include_legacy_entity(entry, policy, "number", "fan_speed_control")
     ]
     # A number's value is state worth showing, so READ_ONLY keeps it and only
     # DISABLED removes it; ``_guard`` refuses the set.
