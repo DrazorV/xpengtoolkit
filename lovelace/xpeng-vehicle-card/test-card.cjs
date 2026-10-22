@@ -72,6 +72,22 @@ async function test(name,fn) {await fn();passed++;console.log(`PASS ${name}`);}
   await test("opening/horn/unlock asks for confirmation without a command",()=>{
     const {card,calls}=setup();const unlock=[...card._actions.values()].find(a=>a.key==="lock");card._run(unlock);assert.equal(calls.length,0);assert.ok(card._confirmation);assert.ok(card.shadowRoot.innerHTML.includes('role="dialog"'));
   });
+  await test("trunk opening always confirms clearance and closing dispatches directly",async()=>{
+    for(const compact of [false,true])for(const confirm_actions of [false,true]){
+      const {card,calls}=setup();card.setConfig({entity_prefix:"xpeng_test",compact,confirm_actions});
+      let pending;const send=card._send.bind(card);card._send=a=>pending=send(a);
+      const show=()=>{if(compact)card._panel="trunk";card._render();};
+      const action=service=>[...card._actions].find(([,a])=>a.key==="trunk"&&a.service===service)[0];
+      const click=dataset=>card.shadowRoot.listeners.click({target:{closest:()=>({dataset})}});
+      show();click({action:action("cover.open_cover")});
+      assert.equal(calls.length,0);assert.ok(card._confirmation);assert.match(card.shadowRoot.innerHTML,/space above and behind/);
+      click({cancel:""});assert.equal(card._confirmation,null);assert.equal(calls.length,0);
+      click({action:action("cover.open_cover")});click({confirm:""});await pending;
+      assert.equal(calls.length,1);assert.equal(calls[0][1],"open_cover");assert.equal(calls[0][3].entity_id,"cover.xpeng_test_trunk");
+      show();click({action:action("cover.close_cover")});await pending;
+      assert.equal(card._confirmation,null);assert.equal(calls.length,2);assert.equal(calls[1][1],"close_cover");assert.equal(calls[1][3].entity_id,"cover.xpeng_test_trunk");
+    }
+  });
   await test("charging uses explicit on/off even when measured state is unknown",async()=>{
     const {card,calls}=setup();await card._send(card._action("charging","switch.turn_on",{},"Start"));await card._send(card._action("charging","switch.turn_off",{},"Stop"));assert.equal(calls[0][1],"turn_on");assert.equal(calls[1][1],"turn_off");assert.equal(card._entity("charging").state,"unknown");
   });

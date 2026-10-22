@@ -9,7 +9,7 @@ The visual direction comes from the [official XPENG app screenshots](https://pla
 Copy `xpeng-vehicle-card.js` to `/config/www/xpeng-vehicle-card/`. Register a **JavaScript module** resource:
 
 ```text
-/local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.5
+/local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.6
 ```
 
 Add the card using its visual editor or YAML:
@@ -38,7 +38,7 @@ Missing entities are omitted, unavailable controls are disabled, and unknown mea
 
 LO/HI shortcuts appear only when the climate entity explicitly advertises those endpoints. Their values follow the native entity’s converted limits, so Fahrenheit displays send the correct display-unit target. Temperature changes do not automatically start A/C. App modes require integration 0.7.4 or newer. The P7+ owner verified the six non-Pet modes and both defrosters. Pet mode reports the vehicle’s Rear Seat Reminder restriction when remote activation is refused; successful Pet activation remains unverified on this car.
 
-Commands use Home Assistant services with entity targets. They do not call XPENG directly or alter evcc configuration. Success means the service request completed; measured telemetry and the last vehicle response remain visible. Errors are shown inline. Opening actions, unlocking, horn and waking prompt for confirmation by default. Card rendering never sends commands.
+Commands use Home Assistant services with entity targets. They do not call XPENG directly or alter evcc configuration. Success means the service request completed; measured telemetry and the last vehicle response remain visible. Errors are shown inline. Trunk opening always requires confirmation with a clearance reminder, including when `confirm_actions: false`; trunk closing sends immediately without confirmation. Other opening actions, unlocking, horn and waking prompt for confirmation by default. Card rendering never sends commands.
 
 ## Renamed entities and multiple cars
 
