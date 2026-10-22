@@ -55,6 +55,7 @@ from .const import (
     CONF_TESLAMATE_PORT,
     CONF_TESLAMATE_TOKEN,
     CONF_CERT_DIR,
+    CONF_CHARGE_PORT_CONTROLS,
     CONF_COMMAND_MODE,
     CONF_CLIENT_ID,
     CONF_CONFIGURED_DEVICE_ID,
@@ -1668,8 +1669,8 @@ class XPengOptionsFlow(OptionsFlow):
                         CONF_LEGACY_ENTITIES, default=current[CONF_LEGACY_ENTITIES]
                     ): bool,
                     vol.Optional(
-                        "charge_port_controls",
-                        default=current.get("charge_port_controls", True),
+                        CONF_CHARGE_PORT_CONTROLS,
+                        default=bool(current.get(CONF_CHARGE_PORT_CONTROLS, True)),
                     ): bool,
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
