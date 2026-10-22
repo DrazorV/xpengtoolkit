@@ -15,6 +15,8 @@ import calendar  # noqa: F401
 import json
 import os
 import pathlib
+# Cache the stdlib extension before component select.py can shadow it.
+import select  # noqa: F401
 import sys
 import tempfile
 import unittest
