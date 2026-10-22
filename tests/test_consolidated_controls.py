@@ -298,6 +298,17 @@ class ChargingTests(unittest.IsolatedAsyncioTestCase):
                 await e.async_turn_off()
             self.assertEqual(exc.exception.key, "command_response_invalid")
 
+    async def test_charge_flap_rejection_is_not_mislabeled_as_session_start(self):
+        e, send = CoverTests.make(self, "charge_port")
+        send.return_value = {
+            "service_type": 4,
+            "msg_type": 1,
+            "msg_content": {"code": 10401},
+        }
+        with self.assertRaises(Error) as exc:
+            await e.async_open_cover()
+        self.assertEqual(exc.exception.key, "vehicle_command_rejected")
+
     async def test_same_subsystem_commands_wait_their_turn(self):
         started, release = asyncio.Event(), asyncio.Event()
         seen = []
@@ -308,7 +319,9 @@ class ChargingTests(unittest.IsolatedAsyncioTestCase):
             await release.wait()
             return {"service_type": 4, "msg_type": 1, "msg_content": {"code": 200}}
 
-        e = switch.XPengChargingSwitch(coordinator(), SimpleNamespace(send_command_wait=Mock()))
+        e = switch.XPengChargingSwitch(
+            coordinator(), SimpleNamespace(send_command_wait=Mock())
+        )
         e.hass.async_add_executor_job = executor
         first = asyncio.create_task(e.async_turn_on())
         await started.wait()

@@ -13,13 +13,16 @@ from .const import DOMAIN
 class VehicleCommandRejected(HomeAssistantError):
     """A vehicle acknowledgement explicitly rejected the requested command."""
 
-    def __init__(self, code: int, service_type: int) -> None:
+    def __init__(self, code: int, service_type: int, content: dict) -> None:
         self.code = code
         super().__init__(
             translation_domain=DOMAIN,
             translation_key=(
                 "charging_start_rejected"
-                if service_type == 4 and code == 10401
+                if service_type == 4
+                and content.get("cmd_type") == 1
+                and content.get("cmd_value") == 1
+                and code == 10401
                 else "vehicle_command_rejected"
             ),
             translation_placeholders={"code": str(code)},
@@ -58,5 +61,5 @@ async def async_send_confirmed(
                 translation_domain=DOMAIN, translation_key="command_response_invalid"
             )
         if code != 200:
-            raise VehicleCommandRejected(code, service_type)
+            raise VehicleCommandRejected(code, service_type, content)
         return response
