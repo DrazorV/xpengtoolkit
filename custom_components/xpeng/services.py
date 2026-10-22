@@ -306,8 +306,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_close_windows(call: ServiceCall) -> None:
-        raise HomeAssistantError(
-            translation_domain=DOMAIN, translation_key="window_command_unverified"
+        await hass.async_add_executor_job(
+            _send, hass, 12, {"cmd_type": 1, "cmd_value": 1}
         )
 
     async def handle_vent_windows(call: ServiceCall) -> None:

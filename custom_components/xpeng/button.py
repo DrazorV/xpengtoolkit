@@ -69,8 +69,8 @@ async def async_setup_entry(
             group=GROUP_SECURING,
             name="Close windows",
             icon="mdi:car-door",
-            service_type=4,
-            msg_content={"cmd_type": 3, "cmd_value": 1},
+            service_type=12,
+            msg_content={"cmd_type": 1, "cmd_value": 1},
         ),
         XPengCommandButton(
             coordinator,
@@ -240,10 +240,6 @@ class XPengCommandButton(XPengEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         self._guard(self._policy_action)
-        if self._attr_translation_key == "close_windows":
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="window_command_unverified"
-            )
         sent = await self.hass.async_add_executor_job(
             self._mqtt_client.send_command,
             self._vin,

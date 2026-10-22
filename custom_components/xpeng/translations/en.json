@@ -733,6 +733,18 @@
     },
     "invalid_climate_option": {
       "message": "Unsupported climate setting: {option}."
+    },
+    "vehicle_command_rejected": {
+      "message": "The vehicle rejected the command (code {code}). Check the vehicle state and command feedback for details."
+    },
+    "command_not_confirmed": {
+      "message": "The vehicle did not confirm the command. Check connectivity and the current vehicle state before trying again."
+    },
+    "command_response_invalid": {
+      "message": "The vehicle returned an unexpected command response. Check command feedback for details."
+    },
+    "charging_start_rejected": {
+      "message": "Charging could not be started (vehicle code {code}). Check that the cable is connected and the charging station is ready."
     }
   }
 }

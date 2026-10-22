@@ -23,6 +23,8 @@ from .command_policy import (
     default_policy,
 )
 from .const import DOMAIN
+from .command_execution import async_send_confirmed
+from .charge_port import charge_cable_state, charging_state_label
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
 from .entity_layout import include_legacy_entity
@@ -538,18 +540,23 @@ class XPengChargingSwitch(XPengEntity, SwitchEntity):
             return False
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        content = (self.coordinator.data or {}).get("msg_content", {})
+        charge = content.get("instant", {}).get("charge")
+        poll_status = getattr(self.coordinator, "poll_status", {}) or {}
+        return {
+            "charging_state": charging_state_label(charge),
+            "cable_connected": charge_cable_state(
+                charge, silent_seconds=poll_status.get("meaningful_silence_seconds")
+            ) if charge else None,
+        }
+
     async def _async_set_charging(self, value: int) -> None:
-        sent = await self.hass.async_add_executor_job(
-            self._mqtt_client.send_command,
-            self._vin,
-            4,
+        await async_send_confirmed(
+            self.hass, self._mqtt_client, self._vin, 4,
             {"cmd_type": 1, "cmd_value": value},
-            2,
         )
-        if not sent:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="command_not_sent"
-            )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._guard()

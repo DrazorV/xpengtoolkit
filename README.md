@@ -995,6 +995,9 @@ a charging switch. Duplicate state sensors are folded into their controllers.
 Upgraded entries keep legacy entities until the owner turns off **Keep legacy
 buttons and duplicate sensors** in Configure, after migrating automations. See
 [fork changes and protocol limitations](docs/FORK_CHANGES.md#070--consolidated-controllers).
-On the observed P7+, the window open action vents; window closing remains
-unavailable until its correct command is verified. Manual charge-flap owners can
-disable motorized charge-port actions while retaining state feedback.
+On the observed P7+, the window open action vents. The 0.7.2 test build adds the
+official app's close command; its physical P7+ test is pending. Manual charge flaps
+retain state without motorized actions when model configuration identifies them.
+Optional seat and sentinel controls use software, hardware and model capability
+data. Unknown support keeps the previous defaults. See the
+[command inventory and capability rules](docs/COMMAND_RESEARCH.md).
