@@ -466,7 +466,7 @@ class LayoutTests(unittest.TestCase):
 
 
 class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
-    async def test_legacy_buttons_keep_working_except_confirmed_bad_close(self):
+    async def test_legacy_window_buttons_use_the_correct_subsystem(self):
         module(
             "homeassistant.components.button", ButtonEntity=type("ButtonEntity", (), {})
         )

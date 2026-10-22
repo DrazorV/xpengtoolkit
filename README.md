@@ -253,6 +253,15 @@ a group that is Disabled is not created at all, and one that is Read only keeps 
 state but refuses its commands. A new install starts at **Safe Plus**, so OTA, the V2L
 outlet and unlocking are absent until you widen it.
 
+### Consolidated controls
+
+New entries use native covers for trunk/windows/charge port and a charging switch.
+Front defrost joins the climate controller. Existing entries keep
+their legacy entities until **Keep legacy buttons and duplicate sensors** is
+turned off. evcc's original climate binary sensor and other typed interfaces
+remain available in compact mode. See [controls and migration](docs/CONTROLS.md),
+[evcc compatibility](docs/EVCC.md) and [protocol research](docs/COMMAND_RESEARCH.md).
+
 ### Climate protocol and feedback
 
 Independent app modes use one measured switch each, including maximum heating/
@@ -1008,23 +1017,3 @@ Not affiliated with, endorsed by, or supported by XPENG. Built by
 reverse-engineering the official mobile app; it may break at any app release.
 Use your own account and credentials, at your own risk. A third-party client may
 affect the official app's live view.
-
-
-### Development fork: compact controls (0.7.0)
-
-This fork defaults new entries to native covers for trunk/windows/charge port and
-a charging switch. Duplicate state sensors are folded into their controllers.
-Upgraded entries keep legacy entities until the owner turns off **Keep legacy
-buttons and duplicate sensors** in Configure, after migrating automations. See
-[fork changes and protocol limitations](docs/FORK_CHANGES.md#070--consolidated-controllers).
-On the observed P7+, the window open action vents. Release 0.7.2 adds the
-official app's close command; both actions were physically confirmed on a P7+
-on 22 October 2026. Manual charge flaps
-retain state without motorized actions when model configuration identifies them.
-Optional seat and sentinel controls use software, hardware and model capability
-data. Unknown support keeps the previous defaults. See the
-[command inventory and capability rules](docs/COMMAND_RESEARCH.md).
-
-Compact mode keeps the old climate **binary sensor** and the other telemetry,
-charge-limit and wake interfaces required by evcc. The native climate controller
-does not replace evcc's on/off `climater` input. See [evcc compatibility](docs/EVCC.md).
