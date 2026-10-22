@@ -8,7 +8,7 @@ class Element {
   attachShadow() { this.shadowRoot={innerHTML:"",listeners:{},addEventListener(type,fn){this.listeners[type]=fn;},querySelector(){return null;},activeElement:null}; }
   toggleAttribute() {}
 }
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,"xpeng-vehicle-card.js"),"utf8"), {
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../../custom_components/xpeng/www/xpeng-vehicle-card.js"),"utf8"), {
   HTMLElement:Element, customElements:{get:k=>registry.get(k),define:(k,v)=>registry.set(k,v)},
   window:{}, console:{info(){}}, queueMicrotask, CustomEvent:class{},
 });
