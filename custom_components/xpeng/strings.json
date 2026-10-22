@@ -745,6 +745,9 @@
     },
     "charging_start_rejected": {
       "message": "Charging could not be started (vehicle code {code}). Check that the cable is connected and the charging station is ready."
+    },
+    "fan_speed_unverified": {
+      "message": "Remote fan-speed control has not been verified for this vehicle."
     }
   }
 }

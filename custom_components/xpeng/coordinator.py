@@ -73,6 +73,7 @@ SEAT_SERVICE_TYPE = 30
 #: response is a status report, not an echo of the request, so its keys land in the same
 #: place the sensors read.
 COMMAND_STATE_SECTIONS = {
+    3: "hvac",  # Climate replies carry the measured HVAC snapshot, not an echo.
     CHARGE_SERVICE_TYPE: "charge",
     SEAT_SERVICE_TYPE: "seat",
     12: "window",

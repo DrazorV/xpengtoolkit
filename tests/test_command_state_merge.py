@@ -258,6 +258,28 @@ class TestWindowFeedback(unittest.TestCase):
         self.assertFalse(coord._merge_command_state(ack))
 
 
+class TestClimateResponseUpdatesMeasuredState(unittest.TestCase):
+    def test_climate_reply_updates_only_reported_fields_without_a_new_snapshot_time(self):
+        original = _cached_state()
+        original["timestamp"] = 123
+        original["msg_content"]["instant"]["hvac"] = {
+            "hvac_on": 0, "hvac_temp_float": 22.5, "hvac_inner_temp_float": 26,
+        }
+        coord = _coordinator_with(original)
+        ack = {"service_type": 3, "code": 200, "content": {
+            "code": 200, "msg": "Succeeded", "hvac_on": 1, "hvac_temp_float": 24.5,
+        }}
+        self.assertTrue(coord._merge_command_state(ack))
+        hvac = coord._last_full_data["msg_content"]["instant"]["hvac"]
+        self.assertEqual(hvac, {"hvac_on": 1, "hvac_temp_float": 24.5, "hvac_inner_temp_float": 26})
+        self.assertEqual(coord._last_full_data["timestamp"], 123)
+        self.assertEqual(original["msg_content"]["instant"]["hvac"]["hvac_on"], 0)
+        ack["code"] = 8
+        ack["content"]["hvac_temp_float"] = 30
+        self.assertFalse(coord._merge_command_state(ack))
+        self.assertEqual(hvac["hvac_temp_float"], 24.5)
+
+
 class TestWhatIsNotMerged(unittest.TestCase):
     def test_a_refusal_is_not_state(self):
         coord = _coordinator_with(_cached_state())
