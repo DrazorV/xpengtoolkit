@@ -933,8 +933,8 @@ strictly passive and sends queries only, at the price of staler sensors. The int
 watchdog honours it too, degrading to a passive query instead of a force-upload.
 
 **Window and charge-port controls are separate.** Window opening vents. The
-0.7.2 test build uses the official app's service-12 close command; its physical
-P7+ test is pending. Full opening and arbitrary positions are not advertised.
+0.7.2 release uses the official app's service-12 close command. A P7+ owner
+confirmed physical ventilation and closing on 22 October 2026. Full opening and arbitrary positions are not advertised.
 Manual charge flaps retain state without motorized commands when known from
 model configuration or when the owner turns off **Motorized charge-port controls**.
 
@@ -1005,8 +1005,9 @@ a charging switch. Duplicate state sensors are folded into their controllers.
 Upgraded entries keep legacy entities until the owner turns off **Keep legacy
 buttons and duplicate sensors** in Configure, after migrating automations. See
 [fork changes and protocol limitations](docs/FORK_CHANGES.md#070--consolidated-controllers).
-On the observed P7+, the window open action vents. The 0.7.2 test build adds the
-official app's close command; its physical P7+ test is pending. Manual charge flaps
+On the observed P7+, the window open action vents. Release 0.7.2 adds the
+official app's close command; both actions were physically confirmed on a P7+
+on 22 October 2026. Manual charge flaps
 retain state without motorized actions when model configuration identifies them.
 Optional seat and sentinel controls use software, hardware and model capability
 data. Unknown support keeps the previous defaults. See the

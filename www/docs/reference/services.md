@@ -105,7 +105,7 @@ service: xpeng.defrost_on
 
 | Service | Effect |
 | --- | --- |
-| `close_windows` | Official app close command (service 12, cmd_type 1, value 1). Physical test of 0.7.2b1 pending |
+| `close_windows` | Official app close command (service 12, cmd_type 1, value 1). Physically confirmed on a P7+ (22 October 2026) |
 | `vent_windows` | Vents all windows. This is the only window command verified to work, and the name is the accurate one |
 | `open_windows` | Also sends the verified command above, which **vents** — full opening was not observed |
 | `open_trunk` | Opens the vehicle trunk |
@@ -119,7 +119,7 @@ because it reports the state back.
 
 Window opening/ventilation uses service 12, cmd_type 1, value 2. Closing uses
 value 1 from the official Android handler. The old charge-port payloads are not
-window commands. Physical testing of the corrected close action is pending;
+window commands. A P7+ owner physically confirmed ventilation and closing on 22 October 2026;
 full opening has not been verified.
 
 ```yaml

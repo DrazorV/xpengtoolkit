@@ -89,11 +89,12 @@ withdraws all climate features and direct calls remain guarded. Legacy mode keep
 the old fan/defrost entities; the expected full compact count is now 101.
 
 
-## 0.7.2b1 — window closing, charging feedback and feature discovery
+## 0.7.2 — window closing, charging feedback and feature discovery
 
 The window cover and legacy window-close service/button use the official
 Android app's service 12, cmd_type 1, cmd_value 1. Opening remains ventilation,
-not full opening. A physical close test of this build is required before merge.
+not full opening. A P7+ owner physically confirmed ventilation and closing
+using the 0.7.2b1 integration build on 22 October 2026.
 Successful window responses update measured positions without advancing the
 full-state freshness clock or fabricating motion.
 

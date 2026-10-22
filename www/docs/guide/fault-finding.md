@@ -186,8 +186,8 @@ well, that is the separate case below.
 ## Window closing and charge-port controls {#window-closing-and-charge-port}
 
 The window open/vent action moves the windows to the ventilation position. The
-0.7.2 test build adds the official app's close command; its physical P7+ test is
-pending. Neither full opening nor arbitrary positions are advertised.
+0.7.2 release adds the official app's close command. A P7+ owner physically
+confirmed ventilation and closing on 22 October 2026. Neither full opening nor arbitrary positions are advertised.
 
 Charge-port motor actions are unavailable when **Motorized charge-port controls**
 is off or model configuration identifies a manual flap. The port's measured

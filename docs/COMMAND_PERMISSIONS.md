@@ -62,7 +62,7 @@ The service column above is generated from `command_policy.SERVICE_GROUPS`, and
 **Windows keep separate opening and securing permissions.** `open_windows` and
 `vent_windows` use service 12, cmd_type 1, cmd_value 2 (ventilation). The close
 action uses the official Android handler's service 12, cmd_type 1, cmd_value 1.
-Physical P7+ verification of this test build is pending. Full opening is unverified.
+A P7+ owner physically confirmed ventilation and closing on 22 October 2026. Full opening is unverified.
 The old charge-port payload is never used for a window action.
 
 **Charge-port controls are an owner's answer, not a permission.** A car with a manual

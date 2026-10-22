@@ -140,7 +140,7 @@ Standard Range LFP pack is about 66 kWh). Driving and charging are excluded.
 | `number.xpeng_<vehicle>_trunk_power_timer` | number (control) | min | Outlet auto-off, 0–1440 in steps of 30; setting 0 switches the outlet off |
 | `button.xpeng_<vehicle>_open_trunk` | button | – | Open tailgate |
 | `button.xpeng_<vehicle>_close_trunk` | button | – | Close tailgate |
-| `button.xpeng_<vehicle>_close_windows` | button | – | Uses the official app close command; physical 0.7.2b1 test pending |
+| `button.xpeng_<vehicle>_close_windows` | button | – | Uses the official app close command; physically confirmed on a P7+ (22 October 2026) |
 | `button.xpeng_<vehicle>_vent_windows` | button | – | Vents all windows — the only window command verified to work (P7+, 2026-10-22) |
 | `button.xpeng_<vehicle>_open_windows` | button | – | Sends the same verified command, which **vents**; full opening was not observed |
 

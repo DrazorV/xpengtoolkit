@@ -6,7 +6,7 @@ Source locations: `MqttSendHandler`, `VehicleMsg`, `VehicleAbilityChecker`, `Sof
 
 ## Confirmed corrections
 
-- Windows: service 12, message type 2, `cmd_type=1`: value 2 vents, value 1 closes. The owner confirmed ventilation in the phone app with Bluetooth off. Closing still needs a physical test of the corrected integration build. No full-opening or position command was found in this MQTT window handler.
+- Windows: service 12, message type 2, `cmd_type=1`: value 2 vents, value 1 closes. The owner confirmed ventilation in the phone app with Bluetooth off. The owner physically confirmed ventilation and closing through the corrected 0.7.2b1 integration build on 22 October 2026. No full-opening or position command was found in this MQTT window handler.
 - Charging: service 4, `cmd_type=1`: value 1 starts, value 0 stops. Existing integration encodings agree. Vehicle rejection 10401 means charging could not start; it is not a permanent unsupported-feature flag.
 - Charge flap: service 4, `cmd_type=3`: value 1 opens, value 0 closes. These are separate from charging start/stop and windows.
 - Trunk: service 9, `cmd_type=2`: value 1 opens, value 3 closes. Existing owner-tested encodings agree.
