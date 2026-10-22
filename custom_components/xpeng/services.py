@@ -13,6 +13,7 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from .charge_port import controls_enabled
 from .command_gate import async_guard_service
 from .command_policy import default_policy, service_group
 from .const import COMMAND_NOT_SENT_MESSAGE, DOMAIN
@@ -216,6 +217,16 @@ def _get_entry_data(hass: HomeAssistant) -> dict[str, Any] | None:
     return entries[entry_id]
 
 
+def _charge_port_controls_enabled(hass: HomeAssistant) -> bool:
+    """Respect the owner option and known model support; unknown stays allowed."""
+    entry_data = _get_entry_data(hass) or {}
+    entry = entry_data.get("entry")
+    from .vehicle_capabilities import from_coordinator
+
+    return (controls_enabled(getattr(entry, "options", None) or {})
+            and from_coordinator(entry_data.get("coordinator")).support("charge_port_control") is not False)
+
+
 def _build_snapshot(coordinator: Any, reason: str) -> dict[str, Any]:
     """Collect a snapshot of every coordinator-tracked field worth diffing."""
     return {
@@ -311,6 +322,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_vent_windows(call: ServiceCall) -> None:
+        # The only window command verified to do anything: it vents. The old
+        # payload here was the charge-port close command.
         await hass.async_add_executor_job(
             _send, hass, 12, {"cmd_type": 1, "cmd_value": 2}
         )
@@ -422,11 +435,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_open_charge_port(call: ServiceCall) -> None:
+        if not _charge_port_controls_enabled(hass):
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="charge_port_control_disabled",
+            )
         await hass.async_add_executor_job(
             _send, hass, 4, {"cmd_type": 3, "cmd_value": 1}
         )
 
     async def handle_close_charge_port(call: ServiceCall) -> None:
+        if not _charge_port_controls_enabled(hass):
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="charge_port_control_disabled",
+            )
         await hass.async_add_executor_job(
             _send, hass, 4, {"cmd_type": 3, "cmd_value": 0}
         )

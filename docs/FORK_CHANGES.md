@@ -115,3 +115,6 @@ See [the derived command inventory](COMMAND_RESEARCH.md) for 97 app MQTT handler
 actions, source limitations and unresolved operations. It does not expose new
 untested operations as controls. The renewal app's shared error module is synced;
 the renewal app version and credential handling are unchanged.
+
+Upstream 0.6.22 history is merged through PR #6. PR #7 preserves evcc interfaces,
+including the old climate binary sensor, in compact mode.

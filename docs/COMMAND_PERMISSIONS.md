@@ -38,9 +38,9 @@ changes it later, and *Custom* there opens the per-group matrix.
 | **Queries and data** | `capture_snapshot`, `charging_hint`, `check_ota`, `clear_stuck_commands`, `force_calendar_sync`, `force_update`, `list_hvac_schedules`, `send_navigation` | Force update, Wake vehicle, Query X-Guard (buttons) |
 | **Comfort and climate** | `climate_off`, `climate_on`, `create_hvac_schedule`, `defrost_off`, `defrost_on`, `delete_hvac_schedule`, `update_hvac_schedule` | Climate; Front defrost; Fan speed; Driver/passenger seat heating and ventilation; Steering wheel heating; one switch per HVAC schedule |
 | **Lights and alerts** | `flash_lights`, `honk_horn` | Flash lights, Honk horn (buttons); Parking lights (switch) |
-| **Charging** | `close_charge_port`, `open_charge_port`, `set_charge_limit`, `start_charge`, `stop_charge` | Start/stop charge and open/close the charge port (buttons); Charge limit (number) |
-| **Securing actions** | `close_trunk`, `close_windows`, `lock`, `sentinel_on` | Door lock (locking); Close windows, Close trunk (buttons); X-Guard (arming); Sentinel sensitivity (number) |
-| **Access actions** | `open_trunk`, `open_windows`, `sentinel_off`, `unlock`, `vent_windows` | Door lock (unlocking); Open trunk, Open windows, Vent windows (buttons); X-Guard (disarming) |
+| **Charging** | `close_charge_port`, `open_charge_port`, `set_charge_limit`, `start_charge`, `stop_charge` | Start/stop charge and open/close the charge port (buttons; the port buttons are absent when **Motorized charge-port controls** is off); Charge limit (number) |
+| **Securing actions** | `close_trunk`, `close_windows`, `lock`, `sentinel_on` | Door lock (locking); Close windows - present but refuses, no verified command - Close trunk (buttons); X-Guard (arming); Sentinel sensitivity (number) |
+| **Access actions** | `open_trunk`, `open_windows`, `sentinel_off`, `unlock`, `vent_windows` | Door lock (unlocking); Open trunk, Open windows, Vent windows (buttons - the two window ones both send the verified *vent* command); X-Guard (disarming) |
 | **Accessory power** | `trunk_power_off`, `trunk_power_on` | Trunk power - the V2L outlet (switch); Trunk power timer (number) |
 | **Firmware and OTA** | `auto_upgrade_off`, `auto_upgrade_on`, `cancel_ota`, `ota_feedback`, `trigger_ota` | OTA auto-upgrade (switch) |
 | **Advanced and raw commands** | `execute_scene`, `send_raw_mqtt`, `toggle_scene` | none - these are services only |
@@ -58,6 +58,18 @@ advisory.
 
 The service column above is generated from `command_policy.SERVICE_GROUPS`, and
 `tests/test_command_policy.py` fails if this file and the code disagree.
+
+**Windows keep separate opening and securing permissions.** `open_windows` and
+`vent_windows` use service 12, cmd_type 1, cmd_value 2 (ventilation). The close
+action uses the official Android handler's service 12, cmd_type 1, cmd_value 1.
+Physical P7+ verification of this test build is pending. Full opening is unverified.
+The old charge-port payload is never used for a window action.
+
+**Charge-port controls are an owner's answer, not a permission.** A car with a manual
+flap cannot act on `open_charge_port` / `close_charge_port`; turning off the
+**Motorized charge-port controls** option stops the two buttons being created and
+makes both services raise a clear error, while the charge-port state sensor is
+unchanged. It is on by default, so nothing changes for a car with a motorized flap.
 
 ## Setting it
 

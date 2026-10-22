@@ -12,6 +12,24 @@ from .command_policy import (
 
 CONF_LEGACY_ENTITIES = "legacy_entities"
 
+# Stable data interfaces used by evcc's Home Assistant vehicle template.
+# A climate entity reports an HVAC mode, while evcc's climater expects a
+# binary_sensor with on/off states. Compact UI layout must not remove that API.
+EVCC_ENTITIES = frozenset(
+    {
+        ("sensor", "battery_soc"),
+        ("sensor", "range"),
+        ("number", "charge_limit_control"),
+        ("binary_sensor", "hvac_on"),
+        ("button", "wake_vehicle"),
+        ("sensor", "charging_state"),
+        ("sensor", "charge_power"),
+        ("sensor", "odometer"),
+        ("sensor", "last_data_update"),
+        ("binary_sensor", "plugged_in"),
+    }
+)
+
 # platform/key -> (replacement platform, unique-id suffix, capability groups)
 # Only identical state is folded into a controller. Detailed charging state,
 # physical cable presence, individual doors and cabin measurements stay separate.
@@ -106,6 +124,8 @@ def legacy_entities_enabled(entry) -> bool:
 
 def include_legacy_entity(entry, policy, platform: str, key: str) -> bool:
     """Retain raw state when its replacement is disabled by command policy."""
+    if (platform, key) in EVCC_ENTITIES:
+        return True
     replacement = REPLACEMENTS.get((platform, key))
     return (
         legacy_entities_enabled(entry)

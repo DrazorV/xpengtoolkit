@@ -183,6 +183,18 @@ log, so `grep Refused /config/home-assistant.log` answers "did something try?".
 Neither is a credentials problem: if the log shows `Login token refresh failed` as
 well, that is the separate case below.
 
+## Window closing and charge-port controls {#window-closing-and-charge-port}
+
+The window open/vent action moves the windows to the ventilation position. The
+0.7.2 test build adds the official app's close command; its physical P7+ test is
+pending. Neither full opening nor arbitrary positions are advertised.
+
+Charge-port motor actions are unavailable when **Motorized charge-port controls**
+is off or model configuration identifies a manual flap. The port's measured
+state remains available. Charging start/stop is a different operation: it needs
+a connected cable and a ready station. Vehicle code 10401 is a charging-start
+failure, not evidence that the charge flap is unsupported.
+
 ## Getting back to a working login
 
 If the credentials really are dead, the integration raises a **Repairs** card named

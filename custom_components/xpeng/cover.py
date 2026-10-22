@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .charge_port import charge_port_state
+from .charge_port import charge_port_state, controls_enabled
 from .command_execution import async_send_confirmed
 from .command_policy import GROUP_ACCESS, GROUP_CHARGING, GROUP_SECURING, default_policy
 from .const import DOMAIN
@@ -32,7 +32,7 @@ async def async_setup_entry(
             data["coordinator"],
             data["mqtt_client"],
             key,
-            charge_port_controls=entry.options.get("charge_port_controls", True),
+            charge_port_controls=controls_enabled(entry.options),
         )
         for key in ("trunk", "windows", "charge_port")
     ]

@@ -105,9 +105,9 @@ service: xpeng.defrost_on
 
 | Service | Effect |
 | --- | --- |
-| `close_windows` | Closes all windows |
-| `vent_windows` | Opens all windows slightly, for ventilation |
-| `open_windows` | Opens all windows fully |
+| `close_windows` | Official app close command (service 12, cmd_type 1, value 1). Physical test of 0.7.2b1 pending |
+| `vent_windows` | Vents all windows. This is the only window command verified to work, and the name is the accurate one |
+| `open_windows` | Also sends the verified command above, which **vents** — full opening was not observed |
 | `open_trunk` | Opens the vehicle trunk |
 | `close_trunk` | Closes the vehicle trunk |
 | `lock` | Locks the doors |
@@ -116,6 +116,11 @@ service: xpeng.defrost_on
 None of these takes a field. They are the same commands the corresponding
 `button` and `lock` entities issue; `lock` is worth preferring for the door lock,
 because it reports the state back.
+
+Window opening/ventilation uses service 12, cmd_type 1, value 2. Closing uses
+value 1 from the official Android handler. The old charge-port payloads are not
+window commands. Physical testing of the corrected close action is pending;
+full opening has not been verified.
 
 ```yaml
 service: xpeng.vent_windows
@@ -159,6 +164,10 @@ Open and close the charge-port flap. No fields. Export cars have one combined
 CCS2 port, so this is the only port command: the car refuses the fast-port
 variant (`cmd_type 4`) with `10404` / `10405`, and the integration no longer
 offers it.
+
+Both services raise a clear error when **Motorized charge-port controls** is
+turned off in the options — the setting for a car with a manual flap, which cannot
+act on these commands. The charge-port state sensor keeps reporting either way.
 
 ```yaml
 service: xpeng.open_charge_port
