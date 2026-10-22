@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Final
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .charge_port import controls_enabled
 from .command_policy import (
     ACTION_COMMAND,
     ACTION_WAKE,
@@ -27,6 +28,10 @@ from .entity_layout import include_legacy_entity
 from .mqtt_client import XPengMQTTClient
 
 _LOGGER = logging.getLogger(__name__)
+
+#: Buttons that only exist on a car with motorized charge-port controls; see the
+#: ``charge_port_controls`` option and charge_port.controls_enabled().
+_CHARGE_PORT_BUTTON_KEYS: Final = frozenset({"open_charge_port", "close_charge_port"})
 
 
 async def async_setup_entry(
@@ -197,6 +202,12 @@ async def async_setup_entry(
     # A button carries no state, so READ_ONLY and DISABLED mean the same thing
     # here: the entity is simply not created. Keeping a button that raises when
     # pressed would be a worse answer than not showing it.
+    #
+    # Charge-port controls are also an owner's answer, not a permission: a manual
+    # flap (measured on a P7+, 2026-10-22) answers the commands with an error or
+    # with nothing, and a button that looks like it worked is worse than no
+    # button. The port state sensor is unaffected.
+    charge_port_controls = controls_enabled(entry.options)
     async_add_entities(
         [
             entity
@@ -205,6 +216,10 @@ async def async_setup_entry(
             and policy.allows(entity._policy_group)
             and include_legacy_entity(
                 entry, policy, "button", entity._attr_translation_key
+            )
+            and (
+                charge_port_controls
+                or entity._attr_translation_key not in _CHARGE_PORT_BUTTON_KEYS
             )
         ]
     )
@@ -241,6 +256,10 @@ class XPengCommandButton(XPengEntity, ButtonEntity):
     async def async_press(self) -> None:
         self._guard(self._policy_action)
         if self._attr_translation_key == "close_windows":
+            # There is no verified window-close command. The payload this button
+            # used to send is the *charge-port* open command, so pressing it
+            # could only ever do the wrong thing; refuse loudly instead of
+            # publishing it (measured on a P7+, 2026-10-22).
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key="window_command_unverified"
             )
