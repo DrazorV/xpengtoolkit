@@ -1,6 +1,6 @@
-/* XPENG Vehicle Card v0.1.5 · No dependencies. Uses existing Home Assistant entities. */
+/* XPENG Vehicle Card v0.1.6 · No dependencies. Uses existing Home Assistant entities. */
 (() => {
-  const VERSION = "0.1.5";
+  const VERSION = "0.1.6";
   const ROLES = {
     image: ["image", "vehicle_picture"], battery: ["sensor", "battery"], range: ["sensor", "range"],
     range_type: ["sensor", "range_type"], lock: ["lock", "door_lock"], trunk: ["cover", "trunk"],
@@ -154,7 +154,9 @@
     }
     _run(a) {
       if (this._busy) return;
-      if (a.confirm && this.config.confirm_actions !== false) { this._confirmation = {...a, entityId:this._id(a.key)}; this._render(); queueMicrotask(() => this.shadowRoot.querySelector("[data-cancel]")?.focus()); }
+      const trunkOpen = a.key === "trunk" && a.service === "cover.open_cover";
+      const confirm = a.key === "trunk" ? trunkOpen : a.confirm && this.config.confirm_actions !== false;
+      if (confirm) { this._confirmation = {...a, entityId:this._id(a.key),message:trunkOpen?"Check there is enough space above and behind the car before opening the trunk.":"This sends a command to your car."}; this._render(); queueMicrotask(() => this.shadowRoot.querySelector("[data-cancel]")?.focus()); }
       else this._send(a);
     }
     _validate(a) {
@@ -343,7 +345,7 @@
       if (!this._prefix()&&!this.config.image_entity&&!Object.keys(this.config.entities).length) { this.shadowRoot.innerHTML=`<style>${css}</style><ha-card><div class="empty">Choose a vehicle image entity or entity_prefix in the card editor. Multiple cars need an explicit selection.</div></ha-card>`;return; }
       const feedback=this._entity("feedback"), rejected=known(feedback)&&feedback.attributes.code!==undefined&&Number(feedback.attributes.code)!==200;
       const body=({controls:()=>this._controls(),climate:()=>this._climate(),charging:()=>this._charging(),status:()=>this._status()})[this._tab]();
-      this.shadowRoot.innerHTML=`<style>${css}</style><ha-card><div class="layout">${this._hero()}<main class="workspace"><nav class="tabs" role="tablist" aria-label="Vehicle sections">${["controls","climate","charging","status"].map(t=>`<button class="tab" type="button" role="tab" aria-selected="${t===this._tab}" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</nav>${this._message?`<div class="notice ${this._message.error?"error":""}" role="status">${esc(this._message.text)}</div>`:""}<section role="tabpanel" aria-label="${this._tab}">${body}</section>${known(feedback)?`<div class="feedback ${rejected?"error":""}">${icon(rejected?"alert-circle-outline":"message-check-outline")}<div>Last vehicle response: ${esc(feedback.state)}<time>${esc(this._age(feedback.last_updated))}</time></div></div>`:""}</main></div>${this._confirmation?`<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true" aria-label="Confirm vehicle action"><h3>${esc(this._confirmation.label)}?</h3><p>This sends a command to your car.</p><div class="inline-actions"><button class="small" type="button" data-cancel>Cancel</button><button class="small primary" type="button" data-confirm>Confirm</button></div></div></div>`:this._panel?this._panelContent():""}</ha-card>`;
+      this.shadowRoot.innerHTML=`<style>${css}</style><ha-card><div class="layout">${this._hero()}<main class="workspace"><nav class="tabs" role="tablist" aria-label="Vehicle sections">${["controls","climate","charging","status"].map(t=>`<button class="tab" type="button" role="tab" aria-selected="${t===this._tab}" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</nav>${this._message?`<div class="notice ${this._message.error?"error":""}" role="status">${esc(this._message.text)}</div>`:""}<section role="tabpanel" aria-label="${this._tab}">${body}</section>${known(feedback)?`<div class="feedback ${rejected?"error":""}">${icon(rejected?"alert-circle-outline":"message-check-outline")}<div>Last vehicle response: ${esc(feedback.state)}<time>${esc(this._age(feedback.last_updated))}</time></div></div>`:""}</main></div>${this._confirmation?`<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true" aria-label="Confirm vehicle action"><h3>${esc(this._confirmation.label)}?</h3><p>${esc(this._confirmation.message || "This sends a command to your car.")}</p><div class="inline-actions"><button class="small" type="button" data-cancel>Cancel</button><button class="small primary" type="button" data-confirm>Confirm</button></div></div></div>`:this._panel?this._panelContent():""}</ha-card>`;
     }
     getCardSize() { return 9; }
     getGridOptions() { return {columns:12,rows:"auto",min_columns:6}; }
