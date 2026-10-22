@@ -33,7 +33,7 @@ Download the JavaScript from the path above and copy it to
 `/config/www/xpeng-vehicle-card/`. Register a **JavaScript module** resource:
 
 ```text
-/local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.6
+/local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.7
 ```
 
 Add the card using its visual editor or YAML:
@@ -58,7 +58,7 @@ confirm_actions: true
 * **Charging:** measured battery/power/state, charge-limit slider using the entity's min/max/step, and explicit start/stop charging actions.
 * **Status:** doors, bonnet, trunk/windows, temperatures, tyre pressures, odometer and software.
 
-Missing entities are omitted, unavailable controls are disabled, and unknown measured values remain unknown. Unknown stateless buttons remain usable. Window **Vent** calls the integration's existing `cover.open_cover`; no full-opening or position command is invented. The cloud connection indicator describes Home Assistant's MQTT connection, not whether the vehicle is awake. The vehicle snapshot age is separate from connectivity.
+Missing entities are omitted, unavailable controls are disabled, and unknown measured values remain unknown. Parking lights default to Off in the card when their switch state is unknown, since this command has no measured MQTT feedback. Reported On/Off states take precedence; the display default does not change the entity state or send a command. Unknown stateless buttons remain usable. Window **Vent** calls the integration's existing `cover.open_cover`; no full-opening or position command is invented. The cloud connection indicator describes Home Assistant's MQTT connection, not whether the vehicle is awake. The vehicle snapshot age is separate from connectivity.
 
 LO/HI shortcuts appear only when the climate entity explicitly advertises those endpoints. Their values follow the native entity’s converted limits, so Fahrenheit displays send the correct display-unit target. Temperature changes do not automatically start A/C. App modes require integration 0.7.4 or newer. The P7+ owner verified the six non-Pet modes and both defrosters. Pet mode reports the vehicle’s Rear Seat Reminder restriction when remote activation is refused; successful Pet activation remains unverified on this car.
 

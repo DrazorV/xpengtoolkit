@@ -14,5 +14,5 @@
     "cryptography>=42.0.0"
   ],
   "after_dependencies": ["frontend", "lovelace"],
-  "version": "0.7.5"
+  "version": "0.7.6"
 }

@@ -173,3 +173,12 @@ credential handling and the renewal app version are unchanged.
   its asynchronous static-path registration API.
 - Vehicle commands, entity IDs, evcc interfaces and card behavior are unchanged,
   including mandatory trunk-open confirmation and immediate closing.
+
+
+## 0.7.6 — parking-light card default
+
+Card 0.1.7 displays parking lights as Off when their switch state is unknown,
+including the compact tile, panel heading and selected Off action. Reported
+On/Off states take precedence. Missing or unavailable controls retain their
+existing behavior. This is a display default only; it does not fabricate entity
+telemetry or send any command. The bundled resource hash updates automatically.
