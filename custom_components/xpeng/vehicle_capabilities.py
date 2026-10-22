@@ -14,54 +14,36 @@ HARDWARE_KEYS = frozenset(
     {
         "AVM",
         "BIG_CUSTOMER",
+        "DRIVER_SEAT_HEAT",
+        "DRIVER_SEAT_HEAT_HARDWARE",
+        "DRIVER_SEAT_WIND",
+        "DRIVER_SEAT_WIND_HARDWARE",
+        "PASSENGER_SEAT_HEAT",
+        "PASSENGER_SEAT_HEAT_HARDWARE",
+        "PASSENGER_SEAT_WIND",
+        "PASSENGER_SEAT_WIND_HARDWARE",
+        "REAR_SEAT_HEAT",
+        "REAR_SEAT_HEAT_HARDWARE",
+        "REAR_SEAT_WIND",
         "WHEEL_HEAT",
         "WHEEL_HEAT_DM",
-        "FRIDGE",
-        "PANORAMIC_SKY_LIGHT",
-        "SUN_SHADE",
-        "REAR_SEAT_WIND",
-        "DRIVER_SEAT_HEAT",
-        "PASSENGER_SEAT_HEAT",
-        "DRIVER_SEAT_WIND",
-        "PASSENGER_SEAT_WIND",
-        "REAR_SEAT_HEAT",
-        "ELECTRIC_TAIL",
-        "DRIVER_SEAT_HEAT_HARDWARE",
-        "PASSENGER_SEAT_HEAT_HARDWARE",
-        "DRIVER_SEAT_WIND_HARDWARE",
-        "PASSENGER_SEAT_WIND_HARDWARE",
-        "REAR_SEAT_HEAT_HARDWARE",
-        "HVAC_SFS",
-        "FRONT_MIRROR_HEAT",
-        "BONNET_UNLOCK",
-        "TRAILER_HOOK",
-        "SCISSORS_DOOR",
-        "ELECTRIC_DOOR",
-        "THIRD_ROW_LEFT_SEAT_HEAT",
-        "THIRD_ROW_RIGHT_SEAT_HEAT",
-        "THIRD_ROW_MIDDLE_SEAT_HEAT",
     }
 )
 LOCAL_KEYS = frozenset(
     {
-        "isSupportAcAutoMode",
-        "isSupportChargePortControl",
-        "isSupportOneChargePort",
-        "isSeatDoubleCheck",
-        "isSupportSeatFrontHeat",
-        "isSupportSeatFrontWind",
-        "isSupportSeatBackHeat",
-        "isSupportSeatBackWind",
-        "isSupportAirClean",
-        "isSupportFrontDeforest",
-        "isSupportRearDeforest",
+        "isSupportFastWarm",
+        "isSupportFastCold",
         "isSupportAirDeodorization",
         "isSupportAirHighTemp",
-        "isSupportDischargeCard",
-        "isSupportFastCold",
-        "isSupportFastWarm",
-        "isSupportSilentMode",
-        "isSupportTrailerHook",
+        "isSupportAirClean",
+        "isSupportRearDeforest",
+        "isSupportAcAutoMode",
+        "isSeatDoubleCheck",
+        "isSupportChargePortControl",
+        "isSupportSeatBackHeat",
+        "isSupportSeatBackWind",
+        "isSupportSeatFrontHeat",
+        "isSupportSeatFrontWind",
     }
 )
 
@@ -148,16 +130,6 @@ class VehicleCapabilities:
             # hide only when both paths agree; a positive software flag alone
             # is insufficient to claim that optional hardware exists.
             return legacy if legacy is newer else None
-        if feature == "fridge":
-            return _all(s("FRIDGE_SOFTWARE"), h("FRIDGE"))
-        if feature == "sun_shade":
-            return _all(s("SUN_SHADE_SOFTWARE"), h("SUN_SHADE"))
-        if feature == "sky_sun_shade":
-            return _all(s("SUN_SHADE_SOFTWARE"), h("PANORAMIC_SKY_LIGHT"))
-        if feature == "battery_warm":
-            return s("CHARGE_BATTERY_KEEP_WARM")
-        if feature == "charge_schedule":
-            return s("CHARGE_MANAGE_SOFTWARE")
         return None
 
     def decisions(self) -> dict[str, str]:
@@ -214,11 +186,6 @@ FEATURES = (
     "steering_wheel_heat",
     "sentinel",
     "charge_port_control",
-    "fridge",
-    "sun_shade",
-    "sky_sun_shade",
-    "battery_warm",
-    "charge_schedule",
 )
 
 # Existing entity suffixes remain unchanged. Optional controls and their old

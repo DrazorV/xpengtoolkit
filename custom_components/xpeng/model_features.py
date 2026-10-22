@@ -1,7 +1,4 @@
-"""Explicit model feature facts observed in Android 3.12.0; cloud overrides win.
-
-No defaults are inferred for absent models, variants or fields.
-"""
+"""Explicit Android 3.12.0 model gates for implemented controls; cloud overrides win."""
 
 MODEL_FEATURES = {
     "DC": {
@@ -11,17 +8,13 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": False,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": False,
-            "isSupportDischargeCard": False,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": False,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": False,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": False,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": False,
         }
     },
     "DG": {
@@ -31,39 +24,30 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": False,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": False,
-            "isSupportDischargeCard": False,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": False,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": False,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": False,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": False,
         }
     },
     "EA": {
-        "E38A": {},
         "EA": {
             "isSeatDoubleCheck": False,
             "isSupportAirClean": True,
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": False,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": True,
-            "isSupportTrailerHook": False,
-        },
+        }
     },
     "ED": {
         "ED": {
@@ -72,17 +56,13 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": False,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": False,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": False,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": False,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": False,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": False,
         }
     },
     "EE": {
@@ -92,39 +72,30 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": True,
-            "isSupportTrailerHook": False,
         }
     },
     "EF": {
-        "E28B": {},
         "EF": {
             "isSeatDoubleCheck": False,
             "isSupportAirClean": True,
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": False,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": False,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": False,
-        },
+        }
     },
     "FA": {
         "FA": {
@@ -133,17 +104,13 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": False,
         }
     },
     "FF": {
@@ -153,61 +120,46 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": True,
-            "isSupportTrailerHook": True,
         }
     },
     "FJ": {
-        "F57AE": {},
-        "F57AS": {},
         "FJ": {
             "isSeatDoubleCheck": False,
             "isSupportAirClean": True,
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": False,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": False,
             "isSupportSeatBackWind": False,
             "isSupportSeatFrontHeat": False,
             "isSupportSeatFrontWind": False,
-            "isSupportTrailerHook": True,
-        },
+        }
     },
     "HA": {
-        "H93A": {},
         "HA": {
             "isSeatDoubleCheck": False,
             "isSupportAirClean": True,
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": True,
             "isSupportSeatBackWind": True,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": True,
-            "isSupportTrailerHook": False,
-        },
+        }
     },
     "HE": {
         "HE": {
@@ -216,17 +168,13 @@ MODEL_FEATURES = {
             "isSupportAirDeodorization": True,
             "isSupportAirHighTemp": True,
             "isSupportChargePortControl": True,
-            "isSupportDischargeCard": True,
             "isSupportFastCold": True,
             "isSupportFastWarm": True,
-            "isSupportFrontDeforest": True,
-            "isSupportOneChargePort": True,
             "isSupportRearDeforest": True,
             "isSupportSeatBackHeat": True,
             "isSupportSeatBackWind": True,
             "isSupportSeatFrontHeat": True,
             "isSupportSeatFrontWind": True,
-            "isSupportTrailerHook": True,
         }
     },
 }
