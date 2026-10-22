@@ -9,11 +9,13 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .command_policy import (
     GROUP_ACCESS,
     GROUP_COMFORT,
+    GROUP_CHARGING,
     GROUP_FIRMWARE,
     GROUP_LIGHTS,
     GROUP_POWER,
@@ -42,6 +44,7 @@ async def async_setup_entry(
 
     entities = [
         XPengSentinelSwitch(coordinator, mqtt_client),
+        XPengChargingSwitch(coordinator, mqtt_client),
         XPengTrunkPowerSwitch(coordinator, mqtt_client),
         XPengDefrostSwitch(coordinator, mqtt_client),
         XPengParkingLightsSwitch(coordinator, mqtt_client),
@@ -498,3 +501,54 @@ class XPengHvacScheduleSwitch(XPengEntity, SwitchEntity):
         self._optimistic_until = time.monotonic() + 30
         self.async_write_ha_state()
         await self._update_validity(False)
+
+
+class XPengChargingSwitch(XPengEntity, SwitchEntity):
+    """Start/stop charging, displaying measured charging activity."""
+
+    _policy_group = GROUP_CHARGING
+    _attr_name = "Charging"
+    _attr_translation_key = "charging"
+    _attr_icon = "mdi:battery-charging"
+    _attr_assumed_state = False
+
+    def __init__(self, coordinator, mqtt_client) -> None:
+        super().__init__(coordinator)
+        self._mqtt_client = mqtt_client
+        self._attr_unique_id = f"xpeng_{self._vin}_charging_switch"
+
+    @property
+    def is_on(self) -> bool | None:
+        content = (self.coordinator.data or {}).get("msg_content", {})
+        code = content.get("instant", {}).get("charge", {}).get("charging_state")
+        raw_power = content.get("interval", {}).get("charge", {}).get("power")
+        try:
+            power = float(raw_power) if raw_power is not None else None
+        except (TypeError, ValueError):
+            power = None
+        if code == 2 or (power is not None and power > 0):
+            return True
+        if code in (0, 1, 3, 4, 8, 15) or power == 0:
+            return False
+        return None
+
+    async def _async_set_charging(self, value: int) -> None:
+        sent = await self.hass.async_add_executor_job(
+            self._mqtt_client.send_command,
+            self._vin,
+            4,
+            {"cmd_type": 1, "cmd_value": value},
+            2,
+        )
+        if not sent:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="command_not_sent"
+            )
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._guard()
+        await self._async_set_charging(1)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._guard()
+        await self._async_set_charging(0)

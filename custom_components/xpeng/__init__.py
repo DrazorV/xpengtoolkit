@@ -545,6 +545,19 @@ def _warn_on_device_id_mismatch(
                 tenant_device_id,
             )
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Keep legacy IDs working for existing users until they opt into compact mode."""
+    from .entity_layout import CONF_LEGACY_ENTITIES
+
+    if entry.version > 2:
+        return False
+    if entry.version < 2:
+        options = dict(entry.options)
+        options.setdefault(CONF_LEGACY_ENTITIES, True)
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
+    return True
+
+
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Register integration-level services (once, not per entry).
 
@@ -1944,6 +1957,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 ),
             )
         )
+
+    # Compact mode is integration-level: seed renamed controller IDs and retire
+    # their old duplicate entries before platforms register the new layout.
+    from .entity_layout import prepare_compact_registry
+    prepare_compact_registry(hass, entry, coordinator.vin, coordinator.command_policy)
 
     # 8. Forward platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

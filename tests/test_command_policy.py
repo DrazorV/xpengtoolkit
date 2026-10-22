@@ -441,6 +441,8 @@ class TestEveryCommandIsGated(unittest.TestCase):
         """
         commands = {
             "async_press",
+            "async_open_cover",
+            "async_close_cover",
             "async_turn_on",
             "async_turn_off",
             "async_set_native_value",
@@ -453,6 +455,7 @@ class TestEveryCommandIsGated(unittest.TestCase):
         checked = 0
         for filename in (
             "button.py",
+            "cover.py",
             "switch.py",
             "number.py",
             "select.py",
@@ -502,9 +505,9 @@ class TestEveryCommandIsGated(unittest.TestCase):
                     self.assertEqual(
                         call.func.value.id, "self", where
                     )
-        # 24 command methods, plus climate's mode setter, which delegates to
+        # 28 command methods, plus climate's mode setter, which delegates to
         # the two guarded methods above rather than guarding itself.
-        self.assertEqual(checked, 25, "a command method appeared or vanished")
+        self.assertEqual(checked, 29, "a command method appeared or vanished")
 
         # And the list above must cover every file that can command the car:
         # a new platform calling the MQTT client directly would otherwise be
@@ -516,7 +519,7 @@ class TestEveryCommandIsGated(unittest.TestCase):
         )
         self.assertEqual(
             senders,
-            ["button.py", "climate.py", "lock.py", "number.py", "select.py", "switch.py"],
+            ["button.py", "climate.py", "cover.py", "lock.py", "number.py", "select.py", "switch.py"],
             "a platform commands the car but is not walked by this test",
         )
 

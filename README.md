@@ -986,3 +986,15 @@ Not affiliated with, endorsed by, or supported by XPENG. Built by
 reverse-engineering the official mobile app; it may break at any app release.
 Use your own account and credentials, at your own risk. A third-party client may
 affect the official app's live view.
+
+
+### Development fork: compact controls (0.7.0)
+
+This fork defaults new entries to native covers for trunk/windows/charge port and
+a charging switch. Duplicate state sensors are folded into their controllers.
+Upgraded entries keep legacy entities until the owner turns off **Keep legacy
+buttons and duplicate sensors** in Configure, after migrating automations. See
+[fork changes and protocol limitations](docs/FORK_CHANGES.md#070--consolidated-controllers).
+On the observed P7+, the window open action vents; window closing remains
+unavailable until its correct command is verified. Manual charge-flap owners can
+disable motorized charge-port actions while retaining state feedback.
