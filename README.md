@@ -1011,3 +1011,7 @@ buttons and duplicate sensors** in Configure, after migrating automations. See
 On the observed P7+, the window open action vents; window closing remains
 unavailable until its correct command is verified. Manual charge-flap owners can
 disable motorized charge-port actions while retaining state feedback.
+
+Compact mode keeps the old climate **binary sensor** and the other telemetry,
+charge-limit and wake interfaces required by evcc. The native climate controller
+does not replace evcc's on/off `climater` input. See [evcc compatibility](docs/EVCC.md).
