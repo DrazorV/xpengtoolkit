@@ -130,6 +130,13 @@ class VehicleCapabilities:
                 h("AVM"),
                 None if big_customer is None else not big_customer,
             )
+        if feature == "pet_mode":
+            return s("PROTECT_MODE")
+        if feature in CLIMATE_FEATURES:
+            local = l(CLIMATE_FEATURES[feature])
+            if feature in ("max_heating", "max_cooling"):
+                return _any(local, s("RAPID_TEMP_UP_AND_DOWN"))
+            return local
         if feature in SEAT_FEATURES:
             software, hardware, local = SEAT_FEATURES[feature]
             legacy = _any(l(local), h(hardware))
@@ -162,6 +169,17 @@ class VehicleCapabilities:
         }
 
 
+CLIMATE_FEATURES = {
+    "pet_mode": "PROTECT_MODE",
+    "max_heating": "isSupportFastWarm",
+    "max_cooling": "isSupportFastCold",
+    "refresh": "isSupportAirDeodorization",
+    "sterilisation": "isSupportAirHighTemp",
+    "ac_cleaning": "isSupportAirClean",
+    "rear_defrost": "isSupportRearDeforest",
+}
+
+
 SEAT_FEATURES = {
     "driver_seat_heat": (
         "DRIVER_SEAT_HEAT_SOFTWARE",
@@ -190,6 +208,7 @@ SEAT_FEATURES = {
     ),
 }
 FEATURES = (
+    *CLIMATE_FEATURES,
     *SEAT_FEATURES,
     "rear_seat_ventilation",
     "steering_wheel_heat",
@@ -215,6 +234,7 @@ ENTITY_FEATURES = {
     "open_charge_port": "charge_port_control",
     "close_charge_port": "charge_port_control",
 }
+ENTITY_FEATURES.update({"climate_" + key: key for key in CLIMATE_FEATURES})
 for _prefix, _feature in (
     ("driver_seat_heat", "driver_seat_heat"),
     ("passenger_seat_heat", "passenger_seat_heat"),

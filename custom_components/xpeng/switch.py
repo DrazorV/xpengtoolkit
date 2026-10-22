@@ -24,6 +24,9 @@ from .command_policy import (
 )
 from .const import DOMAIN
 from .command_execution import async_send_confirmed
+from .climate_commands import send_climate
+from .climate_modes import CLIMATE_MODES, mode_payload, mode_state
+from .vehicle_capabilities import from_coordinator
 from .charge_port import charge_cable_state, charging_state_label
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
@@ -52,6 +55,8 @@ async def async_setup_entry(
         XPengDefrostSwitch(coordinator, mqtt_client),
         XPengParkingLightsSwitch(coordinator, mqtt_client),
     ]
+    entities.extend(XPengClimateModeSwitch(coordinator, mqtt_client, mode)
+                    for mode in CLIMATE_MODES)
     entities = [
         entity for entity in entities
         if not isinstance(entity, XPengDefrostSwitch)
@@ -565,3 +570,61 @@ class XPengChargingSwitch(XPengEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._guard()
         await self._async_set_charging(0)
+
+
+class XPengClimateModeSwitch(XPengEntity, SwitchEntity):
+    """One entity per independent app mode, using measured state and confirmed commands."""
+
+    _policy_group = GROUP_COMFORT
+    _attr_assumed_state = False
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator, mqtt_client, mode) -> None:
+        super().__init__(coordinator)
+        self._mqtt_client = mqtt_client
+        self._mode = mode
+        self._attr_name = mode.name
+        self._attr_translation_key = "climate_" + mode.key
+        self._attr_icon = mode.icon
+        self._attr_unique_id = f"xpeng_{self._vin}_climate_{mode.key}"
+
+    @property
+    def is_on(self) -> bool | None:
+        return mode_state(self.coordinator, self._mode)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            "control_allowed": self._policy.allows(GROUP_COMFORT)
+            and from_coordinator(self.coordinator).support(self._mode.key) is True
+        }
+
+    def _guard_support(self) -> None:
+        if from_coordinator(self.coordinator).support(self._mode.key) is not True:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="climate_mode_unavailable",
+                translation_placeholders={"mode": self._mode.name},
+            )
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._guard()
+        self._guard_support()
+        await send_climate(
+            self.hass,
+            self._mqtt_client,
+            self.coordinator,
+            mode_payload(self.coordinator, self._mode, True),
+            self._mode.service,
+        )
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._guard()
+        self._guard_support()
+        await send_climate(
+            self.hass,
+            self._mqtt_client,
+            self.coordinator,
+            mode_payload(self.coordinator, self._mode, False),
+            self._mode.service,
+        )

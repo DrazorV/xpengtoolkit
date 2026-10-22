@@ -15,16 +15,24 @@ class VehicleCommandRejected(HomeAssistantError):
 
     def __init__(self, code: int, service_type: int, content: dict) -> None:
         self.code = code
+        key = "vehicle_command_rejected"
+        if (
+            service_type == 4
+            and content.get("cmd_type") == 1
+            and content.get("cmd_value") == 1
+            and code == 10401
+        ):
+            key = "charging_start_rejected"
+        elif (
+            service_type == 33
+            and content.get("cmd_type") == 1
+            and content.get("cmd_value") == 2
+            and code == 19013
+        ):
+            key = "pet_mode_rear_seat_reminder"
         super().__init__(
             translation_domain=DOMAIN,
-            translation_key=(
-                "charging_start_rejected"
-                if service_type == 4
-                and content.get("cmd_type") == 1
-                and content.get("cmd_value") == 1
-                and code == 10401
-                else "vehicle_command_rejected"
-            ),
+            translation_key=key,
             translation_placeholders={"code": str(code)},
         )
 

@@ -121,6 +121,24 @@ class ClimateTests(unittest.IsolatedAsyncioTestCase):
             await e.async_set_temperature(temperature=23.5)
         self.assertEqual(send.call_count, 1)
 
+    async def test_lo_hi_require_both_fractional_and_range_capabilities(self):
+        e, send = self.make(["HVAC_TEMP_SUPPORT_FLOAT", "HVAC_TEMP_RANGE_ADJUSTMENT"])
+        self.assertEqual((e.min_temp, e.max_temp), (15.5, 32.5))
+        self.assertEqual(
+            e.extra_state_attributes, {"temperature_extremes": {"LO": 15.5, "HI": 32.5}}
+        )
+        for value in (15.5, 32.5):
+            await e.async_set_temperature(temperature=value)
+            send.assert_called_with(VIN, 3, {"cmd_type": 16, "cmd_value": value}, 2)
+        for caps in (["HVAC_TEMP_SUPPORT_FLOAT"], ["HVAC_TEMP_RANGE_ADJUSTMENT"], []):
+            e, send = self.make(caps)
+            self.assertEqual((e.min_temp, e.max_temp), (16, 32))
+            self.assertEqual(e.extra_state_attributes, {})
+            for value in (15.5, 32.5):
+                with self.assertRaises(Error):
+                    await e.async_set_temperature(temperature=value)
+            send.assert_not_called()
+
     async def test_automatic_power_matches_app_model_profile_and_cloud_override(self):
         e, send = self.make(["HVAC_SUPPORT_TIME_SET"])
         e.coordinator.vehicle_type_code = "DC"

@@ -22,6 +22,14 @@ def temperature_step(coordinator) -> float:
     return 0.5 if supports(coordinator, "HVAC_TEMP_SUPPORT_FLOAT") else 1.0
 
 
+def temperature_bounds(coordinator) -> tuple[float, float]:
+    if supports(coordinator, "HVAC_TEMP_SUPPORT_FLOAT") and supports(
+        coordinator, "HVAC_TEMP_RANGE_ADJUSTMENT"
+    ):
+        return 15.5, 32.5
+    return 16.0, 32.0
+
+
 def _with_duration(coordinator, content: dict, duration: int | None) -> dict:
     if duration is not None and supports(coordinator, "HVAC_SUPPORT_TIME_SET"):
         content["time"] = duration
@@ -33,9 +41,10 @@ def temperature_payload(coordinator, temperature: Any, duration: int = 15) -> di
         raise ValueError("Invalid target temperature")
     target = float(temperature)
     step = temperature_step(coordinator)
+    minimum, maximum = temperature_bounds(coordinator)
     if (
         not math.isfinite(target)
-        or not 16 <= target <= 32
+        or not minimum <= target <= maximum
         or not math.isclose(target / step, round(target / step))
     ):
         raise ValueError("Invalid target temperature")
@@ -65,6 +74,8 @@ def power_payload(coordinator, on: bool, duration: int = 15) -> dict:
     )
 
 
-async def send_climate(hass, client, coordinator, content: dict) -> None:
+async def send_climate(
+    hass, client, coordinator, content: dict, service_type: int = 3
+) -> None:
     """Surface refusal and timeout; state comes only from measured feedback."""
-    await async_send_confirmed(hass, client, coordinator.vin, 3, content)
+    await async_send_confirmed(hass, client, coordinator.vin, service_type, content)

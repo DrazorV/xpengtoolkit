@@ -1,0 +1,60 @@
+# XPENG Vehicle Card
+
+A standalone Lovelace card for the XPENG Toolkit integration. No extra cards, dependencies, helpers, tokens or vehicle API clients are required. It uses the existing Home Assistant entities and vehicle image.
+
+The visual direction comes from the [official XPENG app screenshots](https://play.google.com/store/apps/details?id=com.xiaopeng.globalcarinfo): pale blue vehicle backdrop, prominent range, restrained icons and green accents. This is an independent Home Assistant card.
+
+## Install
+
+Copy `xpeng-vehicle-card.js` to `/config/www/xpeng-vehicle-card/`. Register a **JavaScript module** resource:
+
+```text
+/local/xpeng-vehicle-card/xpeng-vehicle-card.js?v=0.1.5
+```
+
+Add the card using its visual editor or YAML:
+
+```yaml
+type: custom:xpeng-vehicle-card
+name: P7+
+image_entity: image.xpeng_p7_vehicle_picture
+entity_prefix: xpeng_p7
+theme: auto
+compact: true
+confirm_actions: true
+```
+
+`theme` supports `auto`, `light`, and `dark`. Compact mode is the default: access and lights open small panels inside the card. Set `compact: false` for an expanded layout. Confirmations default to enabled. Add the card to any existing dashboard using the card picker entry **XPENG Vehicle**. No separate dashboard or sidebar page is required. The card also supports sections grid sizing.
+
+## Included controls
+
+* **Controls:** door lock/unlock, horn, flash, wake, refresh, trunk, window ventilation/close, parking lights and X-Guard. Charge-port buttons appear only when their cover advertises motorized actions.
+* **Climate:** A/C on/off, editable target temperature, front defrost, all exposed seat heating/ventilation levels, and steering-wheel heating. Capability-gated switches add maximum heating/cooling, Refresh, Sterilisation, A/C cleaning, rear defrost and Pet mode. Cabin fan speed appears only if the integration advertises a valid mapping.
+* **Scheduling:** an inline editor under Climate lists, creates, edits and deletes vehicle HVAC appointments. Times use Home Assistant’s timezone; the vehicle’s saved A/C settings apply. No selected weekdays means run once. Schedule calls target this card’s selected vehicle and report backend errors.
+* **Charging:** measured battery/power/state, charge-limit slider using the entity's min/max/step, and explicit start/stop charging actions.
+* **Status:** doors, bonnet, trunk/windows, temperatures, tyre pressures, odometer and software.
+
+Missing entities are omitted, unavailable controls are disabled, and unknown measured values remain unknown. Unknown stateless buttons remain usable. Window **Vent** calls the integration's existing `cover.open_cover`; no full-opening or position command is invented. The cloud connection indicator describes Home Assistant's MQTT connection, not whether the vehicle is awake. The vehicle snapshot age is separate from connectivity.
+
+LO/HI shortcuts appear only when the climate entity explicitly advertises those endpoints. Their values follow the native entity’s converted limits, so Fahrenheit displays send the correct display-unit target. Temperature changes do not automatically start A/C. App modes require integration 0.7.4 or newer. The P7+ owner verified the six non-Pet modes and both defrosters. Pet mode reports the vehicle’s Rear Seat Reminder restriction when remote activation is refused; successful Pet activation remains unverified on this car.
+
+Commands use Home Assistant services with entity targets. They do not call XPENG directly or alter evcc configuration. Success means the service request completed; measured telemetry and the last vehicle response remain visible. Errors are shown inline. Opening actions, unlocking, horn and waking prompt for confirmation by default. Card rendering never sends commands.
+
+## Renamed entities and multiple cars
+
+Choose `image_entity` or `entity_prefix` explicitly for each vehicle. If only one standard XPENG image exists, it can be selected automatically. The card refuses ambiguous auto-discovery. When Home Assistant's frontend entity registry includes unique IDs, renamed entities are resolved on the selected image's device. Set explicit role overrides for any custom names:
+
+```yaml
+entities:
+  lock: lock.my_car_doors
+  driver_heating: select.my_driver_seat
+  horn: false
+```
+
+Roles are the keys in `ROLES` near the top of the JavaScript file, plus `driver_heating`, `driver_ventilation`, `passenger_heating`, `passenger_ventilation`, `left_rear_heating`, `left_rear_ventilation`, `right_rear_heating`, and `right_rear_ventilation`. A role set to `false` is hidden. The editor keeps advanced YAML options intact.
+
+## Validation and updates
+
+Run `node test-card.cjs`. These isolated tests stub the Home Assistant connection; they never issue real car commands. Visual verification should include a phone-width and a desktop-width view and each tab. Do not test physical actions without the owner's involvement.
+
+Bump the resource's `?v=` value when updating JavaScript so browsers fetch the new file. Existing open sessions may need a refresh. To remove the card, delete its dashboard/card, then unregister its resource and remove the copied directory. The integration and its entities remain independent.
