@@ -1,6 +1,6 @@
-/* XPENG Vehicle Card v0.1.6 · No dependencies. Uses existing Home Assistant entities. */
+/* XPENG Vehicle Card v0.1.7 · No dependencies. Uses existing Home Assistant entities. */
 (() => {
-  const VERSION = "0.1.6";
+  const VERSION = "0.1.7";
   const ROLES = {
     image: ["image", "vehicle_picture"], battery: ["sensor", "battery"], range: ["sensor", "range"],
     range_type: ["sensor", "range_type"], lock: ["lock", "door_lock"], trunk: ["cover", "trunk"],
@@ -137,7 +137,12 @@
     }
     _entity(key) { return this._hass?.states[this._id(key)] || null; }
     _available(key) { const e = this._entity(key); return !!e && e.state !== "unavailable"; }
-    _state(key, fallback = "Unknown") { const e = this._entity(key); return known(e) ? e.state : fallback; }
+    _state(key, fallback = "Unknown") {
+      const e = this._entity(key);
+      // Parking lights have no measured feedback; default only their display.
+      if (key === "parking_lights" && e?.state === "unknown") return "off";
+      return known(e) ? e.state : fallback;
+    }
     _display(key, digits = 0) {
       const e = this._entity(key), n = numeric(e?.state);
       return known(e) ? `${n === null ? e.state : n.toLocaleString(this._hass?.locale?.language, {maximumFractionDigits:digits})}${e.attributes.unit_of_measurement ? " " + e.attributes.unit_of_measurement : ""}` : "—";
