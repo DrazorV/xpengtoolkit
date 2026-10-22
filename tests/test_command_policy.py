@@ -450,6 +450,8 @@ class TestEveryCommandIsGated(unittest.TestCase):
             "async_lock",
             "async_unlock",
             "async_set_temperature",
+            "async_set_fan_mode",
+            "async_set_preset_mode",
         }
         delegates = {"async_set_hvac_mode": {"async_turn_on", "async_turn_off"}}
         checked = 0
@@ -505,9 +507,9 @@ class TestEveryCommandIsGated(unittest.TestCase):
                     self.assertEqual(
                         call.func.value.id, "self", where
                     )
-        # 28 command methods, plus climate's mode setter, which delegates to
+        # 30 command methods, plus climate's mode setter, which delegates to
         # the two guarded methods above rather than guarding itself.
-        self.assertEqual(checked, 29, "a command method appeared or vanished")
+        self.assertEqual(checked, 31, "a command method appeared or vanished")
 
         # And the list above must cover every file that can command the car:
         # a new platform calling the MQTT client directly would otherwise be

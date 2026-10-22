@@ -19,7 +19,7 @@ REPLACEMENTS = {
     ("sensor", "max_charge"): ("number", "charge_limit_control", (GROUP_CHARGING,)),
     ("sensor", "slow_charge_port"): ("cover", "charge_port_cover", (GROUP_CHARGING,)),
     ("sensor", "set_temperature"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
-    ("sensor", "hvac_fan_speed"): ("number", "fan_speed_control", (GROUP_COMFORT,)),
+    ("sensor", "hvac_fan_speed"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
     ("sensor", "trunk_power_timer"): (
         "number",
         "trunk_power_timer_control",
@@ -33,7 +33,7 @@ REPLACEMENTS = {
     ("binary_sensor", "locked"): ("lock", "door_lock", (GROUP_ACCESS, GROUP_SECURING)),
     ("binary_sensor", "charging"): ("switch", "charging_switch", (GROUP_CHARGING,)),
     ("binary_sensor", "hvac_on"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
-    ("binary_sensor", "defrost"): ("switch", "defrost_switch", (GROUP_COMFORT,)),
+    ("binary_sensor", "defrost"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
     ("binary_sensor", "trunk"): (
         "cover",
         "trunk_cover",
@@ -56,6 +56,17 @@ REPLACEMENTS = {
     ),
     ("binary_sensor", "trunk_power"): ("switch", "trunk_power_switch", (GROUP_POWER,)),
 }
+REPLACEMENTS[("number", "fan_speed_control")] = (
+    "climate",
+    "cabin_climate",
+    (GROUP_COMFORT,),
+)
+REPLACEMENTS[("switch", "defrost_switch")] = (
+    "climate",
+    "cabin_climate",
+    (GROUP_COMFORT,),
+)
+
 for _function in (
     "driver_seat_heat",
     "passenger_seat_heat",

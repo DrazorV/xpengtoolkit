@@ -730,6 +730,9 @@
     },
     "charge_port_control_disabled": {
       "message": "Remote charge-port controls are disabled for this vehicle. Enable motorized charge-port controls only if the vehicle supports them."
+    },
+    "invalid_climate_option": {
+      "message": "Unsupported climate setting: {option}."
     }
   }
 }

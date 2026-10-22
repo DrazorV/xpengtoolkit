@@ -77,3 +77,13 @@ Vehicle evidence supplied by a P7+ owner on 2026-10-22:
   commands, with no new claim of physical compatibility.
 
 This is an integration change, not a set of per-installation template helpers.
+
+
+## 0.7.1 — one climate controller
+
+Compact mode also folds the fan-speed number and front-defrost switch into the
+climate entity. Fan modes 1–8 use the existing service-3, cmd-type-2 command;
+the defrost/none presets use the existing cmd-type-4 command. Both report measured
+telemetry, reject invalid choices and surface publication failure. Read-only mode
+withdraws all climate features and direct calls remain guarded. Legacy mode keeps
+the old fan/defrost entities; the expected full compact count is now 101.
