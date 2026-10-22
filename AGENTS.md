@@ -1,39 +1,18 @@
-# Agent notes
+# Development notes for DrazorV/xpengtoolkit
 
-## Publishing identity - read this before pushing anything
+This is DrazorV's development fork of xpengtoolkit/xpengtoolkit. The user has
+authorized publishing fixes, PRs and releases to this fork. Publish as DrazorV;
+the upstream maintainer's machine-specific xpengtoolkit identity rule does not
+apply to this fork. Never push to the upstream remote without a separate request.
 
-Everything that leaves this machine is published as **xpengtoolkit**, never as the
-maintainer's personal account. Commits are already configured locally as
-`xpengtoolkit <xpengtoolkit@users.noreply.github.com>`; the risk is **authentication**,
-because `gh` and the macOS keychain on the maintainer's Mac can belong to the personal
-account instead.
-
-Before any `git push`, tag or `gh release`, all of these must say `xpengtoolkit`:
-
-```bash
-git log -1 --format='%an <%ae> %cn <%ce>'
-gh auth status
-printf "protocol=https\nhost=github.com\n\n" | git credential fill | grep '^username='
-```
-
-If any of them does not, stop and ask. Never publish with a personal account or token
-"just this once" - a release is publicly attributed to its creator. The full rule is
-in [`.cursor/rules/publish-identity.mdc`](.cursor/rules/publish-identity.mdc).
-
-## Conventions
-
-- Tests are plain scripts, no pytest: `python3 tests/test_config_flow.py`. Some files
-  also carry `unittest` classes, so `python3 -m unittest discover -s tests` runs those.
-- Credentials never enter git: `custom_components/xpeng/certs/*.pem`,
-  `xpeng_tokens.json` and `xpeng_tenant.json` are ignored. Check
-  `git diff --cached --name-only` before committing.
-- Releases: bump `custom_components/xpeng/manifest.json`, commit with a `0.4.x:` title,
-  tag `v0.4.x`, then `gh release create 0.4.x`. The companion app is versioned
-  separately in `xpeng_renew/config.yaml`.
-
-  On this exFAT workspace `git add -A` occasionally misses the file you just wrote
-  (git's stat cache cannot see the coarse mtime change). Re-run
-  `git add custom_components/xpeng/manifest.json` explicitly and check
-  `git show HEAD:custom_components/xpeng/manifest.json | grep version` before
-  tagging - a release whose manifest still says the previous version makes HACS
-  offer the update forever.
+- Use codex/ branches and PRs targeting this fork's main branch.
+- Run `python3 tools/run_tests.py` before merging. Tests run in separate processes.
+- Test dependencies: `python3 -m pip install -r requirements-test.txt`.
+- Preserve domain xpeng, existing unique IDs and config-entry compatibility.
+- Never commit credentials, certificates, captured vehicle traffic or local IDE metadata.
+- Preserve the original MIT notice and record upstream provenance.
+- The integration and credential renewal app are versioned independently. Integration
+  releases must match custom_components/xpeng/manifest.json. Do not change the
+  renewal app's vendored copy without tools/sync_renew_vendor.py and its tests.
+- Changes to command encodings require vehicle evidence. A successful publish or
+  acknowledgement is not confirmation that a physical setting changed.
