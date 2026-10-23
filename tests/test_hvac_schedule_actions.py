@@ -1,5 +1,8 @@
 """Vehicle selection, schedule writes, refresh failures and timezone behavior."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -8,6 +11,8 @@ from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_consolidated_controls import Error, load, module
+
+_IMPORTS.use(__import__("test_consolidated_controls"))
 
 api = module(
     "custom_components.xpeng.xpeng_api",
@@ -252,6 +257,9 @@ class ScheduleTests(unittest.IsolatedAsyncioTestCase):
             schedules.schedule_entry(hass, {"vehicle_entity_id": "climate.car_b"}), b
         )
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

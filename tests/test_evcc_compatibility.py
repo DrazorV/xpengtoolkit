@@ -1,5 +1,8 @@
 """Compact controls must retain evcc's typed Home Assistant interfaces."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 import ast
 import importlib.util
 from pathlib import Path
@@ -48,7 +51,7 @@ class EvccCompatibility(unittest.TestCase):
             for domain, key in required:
                 with self.subTest(preset=preset, domain=domain, key=key):
                     self.assertTrue(layout.include_legacy_entity(entry, p, domain, key))
-        self.assertFalse(
+        self.assertTrue(
             layout.include_legacy_entity(
                 entry,
                 policy.CommandPolicy.from_preset("full"),
@@ -112,6 +115,9 @@ class EvccCompatibility(unittest.TestCase):
             e._get_nested_value = lambda path, value=raw: value
             self.assertIs(ns["is_on"](e), expected)
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

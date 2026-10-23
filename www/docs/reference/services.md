@@ -1,22 +1,29 @@
 # Services
 
-The integration registers **43 services** under the `xpeng` domain: 42 vehicle
-commands and [`xpeng.import_credentials`](#credential-import). The vehicle
-commands are fire-and-forget MQTT or cloud calls — they return as soon as the
-command has been sent, not when the car has acted, so a state change appears on
-the next poll and the writable entities read optimistically for about 30 s (see
-[Entities](./entities)).
+The integration exposes global `xpeng.*` services and native entity services.
+Global commands such as `xpeng.unlock` resolve the first configured vehicle;
+they do not accept a generic `target.entity_id`. Prefer native `cover`, `climate`,
+`switch`, `number`, `select` and `lock` actions with an explicit entity target
+when controlling a particular vehicle.
 
-None of the vehicle commands take a `target` or `entity_id`. Each resolves the
-integration's **first config entry**, which is the single configured vehicle on a
-one-car install; on a multi-vehicle install all of them act on that one entry.
-`xpeng.import_credentials` is the exception: it accepts an `entry_id`.
+The four HVAC schedule services accept `vehicle_entity_id` (a climate entity,
+tracker or other XPENG entity). It is required when more than one vehicle is
+configured. The selected entry's policy and the caller's entity permissions are
+checked. `xpeng.import_credentials` instead accepts a config `entry_id`.
+
+Climate, window open/vent/close, charging start/stop, charge-port, charge-limit
+and defrost command paths wait for a correlated acknowledgement and raise for
+refusals, malformed responses and timeouts. Other legacy MQTT services return
+after publication; REST calls return their API result. Acknowledgement is not
+proof of physical actuation: measured telemetry supplies the state. Replies
+without a matching ID or echoed command identity cannot confirm a request.
 
 ::: info
-The bounds in the field tables are the **selector** bounds — what the service form
-in the UI enforces. Only `sentinel_on.sensitivity` and `set_charge_limit.limit` are
-also range-validated by the service schema, so a YAML call can pass a value
-outside the other bounds and the integration will not stop it.
+Selectors describe the broad UI input range. Runtime validation also checks
+vehicle capability. Climate normally uses 16–32 °C; the 15.5/32.5 LO/HI endpoints
+are accepted only when the vehicle advertises them. Changing a target alone
+does not power on A/C. `climate_on` first sets its target, then requests power;
+if the second step fails, its error states that the target may already be changed.
 :::
 
 Every service is registered when the first config entry is set up, and every one
@@ -71,7 +78,7 @@ running indefinitely.
 
 | Field | Required | Default | Description |
 | --- | --- | --- | --- |
-| `temperature` | no | `22.0` | Target temperature in °C; `16`–`32`, step `0.5` |
+| `temperature` | no | `22.0` | Target temperature in °C; `15.5`–`32.5`, step `0.5`; endpoints require vehicle support |
 | `duration` | no | `15` | Run time in minutes; `1`–`60` |
 
 ```yaml
@@ -610,3 +617,18 @@ instead of an `imported` result. That call also loads the component and register
 this service, so every later renewal uses `import_credentials` normally. See
 [Unattended renewal](../guide/unattended-renewal) and
 [App options](./app-options).
+
+## Selecting the vehicle for schedules
+
+`list_hvac_schedules`, `create_hvac_schedule`, `update_hvac_schedule` and
+`delete_hvac_schedule` all accept optional `vehicle_entity_id`. Single-car calls
+may omit it; multi-car calls must choose an entity belonging to the intended
+XPENG config entry. Successful edits refresh the schedule/calendar. If an edit
+succeeds but refresh fails, the service reports that uncertainty rather than
+silently claiming the displayed list is current.
+
+```yaml
+action: xpeng.list_hvac_schedules
+data:
+  vehicle_entity_id: climate.xpeng_my_car_climate
+```

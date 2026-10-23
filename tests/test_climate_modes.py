@@ -1,5 +1,8 @@
 """New app modes: protocol, permissions, support and measured state regressions."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -8,6 +11,8 @@ from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_consolidated_controls import Error, VIN, coordinator, policy, state, switch
+
+_IMPORTS.use(__import__("test_consolidated_controls"))
 from custom_components.xpeng.climate_modes import CLIMATE_MODES, mode_payload
 from custom_components.xpeng.vehicle_capabilities import (
     CLIMATE_FEATURES,
@@ -179,6 +184,9 @@ class ModeTests(unittest.IsolatedAsyncioTestCase):
             )
         )
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

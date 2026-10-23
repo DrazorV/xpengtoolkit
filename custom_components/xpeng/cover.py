@@ -106,7 +106,7 @@ class XPengCover(XPengEntity, CoverEntity):
             return features
         if self._policy.allows(self._open_group):
             features |= CoverEntityFeature.OPEN
-        if self._close_command is not None and self._policy.allows(self._close_group):
+        if self._policy.allows(self._close_group):
             features |= CoverEntityFeature.CLOSE
         return features
 
@@ -169,8 +169,4 @@ class XPengCover(XPengEntity, CoverEntity):
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         self._guard(group=self._close_group)
-        if self._close_command is None:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="window_command_unverified"
-            )
         await self._async_send(self._close_command)

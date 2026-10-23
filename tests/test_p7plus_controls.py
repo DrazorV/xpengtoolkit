@@ -64,7 +64,7 @@ class WindowCommands(unittest.TestCase):
 
     def test_the_vent_service_sends_the_verified_command(self):
         block = _section(SERVICES, "handle_vent_windows", "handle_sentinel_on")
-        self.assertIn("_send, hass, 12, {\"cmd_type\": 1, \"cmd_value\": 2}", block)
+        self.assertIn("_send_confirmed(hass, 12, {\"cmd_type\": 1, \"cmd_value\": 2}", block)
         self.assertNotIn("cmd_type\": 3", block)
 
     def test_window_close_uses_the_official_handler_not_the_charge_port(self):
@@ -73,7 +73,7 @@ class WindowCommands(unittest.TestCase):
         self.assertIn('{"cmd_type": 1, "cmd_value": 1}', block)
         self.assertNotIn("service_type=4", block)
         block = _section(SERVICES, "handle_close_windows", "handle_vent_windows")
-        self.assertIn('_send, hass, 12, {"cmd_type": 1, "cmd_value": 1}', block)
+        self.assertIn('_send_confirmed(hass, 12, {"cmd_type": 1, "cmd_value": 1}', block)
         self.assertNotIn('"cmd_type": 3', block)
 
     def test_open_windows_is_unchanged(self):
@@ -131,7 +131,7 @@ class ChargePortControlsOption(unittest.TestCase):
             with self.subTest(name):
                 self.assertIn("charge_port_controls", init["data"])
                 self.assertIn("charge_port_controls", init["data_description"])
-                self.assertIn("window_command_unverified", data["exceptions"])
+                self.assertNotIn("window_command_unverified", data["exceptions"])
                 self.assertIn("charge_port_control_disabled", data["exceptions"])
 
 

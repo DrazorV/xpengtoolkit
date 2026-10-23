@@ -4,21 +4,28 @@ A standalone Lovelace card for the XPENG Toolkit integration. No extra cards, de
 
 The visual direction comes from the [official XPENG app screenshots](https://play.google.com/store/apps/details?id=com.xiaopeng.globalcarinfo): pale blue vehicle backdrop, prominent range, restrained icons and green accents. This is an independent Home Assistant card.
 
-## Install with the integration (0.7.5 and later)
+## Install with the integration (0.6.26 and later)
 
 The card is bundled in the integration at
 [`custom_components/xpeng/www/xpeng-vehicle-card.js`](../../custom_components/xpeng/www/xpeng-vehicle-card.js).
-Install or update **DrazorV/xpengtoolkit** through HACS, restart Home Assistant,
-then refresh your browser. In any dashboard, select **Edit dashboard → Add card →
-XPENG Vehicle**. No separate card repository, file copy or resource registration
-is needed. No dashboard or sidebar page is created.
+Install/update **xpengtoolkit/xpengtoolkit** through HACS and restart Home
+Assistant. After configuring a vehicle, open **Configure** and enable **Install
+and manage the XPENG Vehicle dashboard card**. This is optional and off by default.
+Refresh the browser, then select **Edit dashboard → Add card → XPENG Vehicle**.
+No separate card repository or file copy is needed. No dashboard or sidebar page
+is created, and existing dashboard card configurations are never rewritten.
+
+Enabling the option permits shared resource registration and migration of the
+exact legacy local card URL described below. Turning it off for all vehicles or
+removing the last opted-in vehicle removes the managed resource. For a manual
+installation instead, leave the option off and follow the manual instructions.
 
 Integration updates also update the card. Its resource URL contains a hash of
 the shipped JavaScript, so changed files get a fresh browser cache URL. Multiple
 vehicles share one resource; add a separate card for each vehicle.
 
 Existing storage-managed `/local/xpeng-vehicle-card/xpeng-vehicle-card.js`
-resources migrate automatically, preserving one resource ID and removing exact
+resources migrate after opt-in, preserving one resource ID and removing exact
 duplicates. Existing dashboard card configurations stay valid. The old file in
 `www/xpeng-vehicle-card/` is left untouched; it can be removed after migration.
 
@@ -60,7 +67,7 @@ confirm_actions: true
 
 Missing entities are omitted, unavailable controls are disabled, and unknown measured values remain unknown. Parking lights default to Off in the card when their switch state is unknown, since this command has no measured MQTT feedback. Reported On/Off states take precedence; the display default does not change the entity state or send a command. Unknown stateless buttons remain usable. Window **Vent** calls the integration's existing `cover.open_cover`; no full-opening or position command is invented. The cloud connection indicator describes Home Assistant's MQTT connection, not whether the vehicle is awake. The vehicle snapshot age is separate from connectivity.
 
-LO/HI shortcuts appear only when the climate entity explicitly advertises those endpoints. Their values follow the native entity’s converted limits, so Fahrenheit displays send the correct display-unit target. Temperature changes do not automatically start A/C. App modes require integration 0.7.4 or newer. The P7+ owner verified the six non-Pet modes and both defrosters. Pet mode reports the vehicle’s Rear Seat Reminder restriction when remote activation is refused; successful Pet activation remains unverified on this car.
+LO/HI shortcuts appear only when the climate entity explicitly advertises those endpoints. Their values follow the native entity’s converted limits, so Fahrenheit displays send the correct display-unit target. Temperature changes do not automatically start A/C. App modes require integration 0.6.26 or newer. The P7+ owner verified the six non-Pet modes and both defrosters. Pet mode reports the vehicle’s Rear Seat Reminder restriction when remote activation is refused; successful Pet activation remains unverified on this car.
 
 Commands use Home Assistant services with entity targets. They do not call XPENG directly or alter evcc configuration. Success means the service request completed; measured telemetry and the last vehicle response remain visible. Errors are shown inline. Trunk opening always requires confirmation with a clearance reminder, including when `confirm_actions: false`; trunk closing sends immediately without confirmation. Other opening actions, unlocking, horn and waking prompt for confirmation by default. Card rendering never sends commands.
 

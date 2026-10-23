@@ -1,5 +1,8 @@
 """Official-app climate protocol, measured feedback and refusal regressions."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 from enum import IntFlag
 from pathlib import Path
 import ast
@@ -20,7 +23,10 @@ from test_consolidated_controls import (
     module,
     policy,
     state,
+    switch,
 )
+
+_IMPORTS.use(__import__("test_consolidated_controls"))
 
 
 class Features(IntFlag):
@@ -262,6 +268,7 @@ class ClimateTests(unittest.IsolatedAsyncioTestCase):
         ]
         env = {
             "ServiceCall": object,
+            "DOMAIN": "xpeng",
             "HomeAssistantError": Error,
             "hass": e.hass,
             "_get_entry_data": lambda hass: {
@@ -301,6 +308,32 @@ class ClimateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             send.call_count, 1
         )  # A rejected target must not proceed to power-on.
+        send.reset_mock()
+        send.side_effect = [
+            {"service_type": 3, "msg_type": 1, "msg_content": {"code": 200}},
+            {"service_type": 3, "msg_type": 1, "msg_content": {"code": 8}},
+        ]
+        with self.assertRaises(Error) as partial:
+            await env["handle_climate_on"](SimpleNamespace(data={"temperature": 24.5}))
+        self.assertEqual(partial.exception.key, "climate_start_partial")
+        self.assertEqual(send.call_count, 2)  # No hidden rollback after power refusal.
+
+    async def test_legacy_defrost_refusal_preserves_measured_state(self):
+        c = coordinator(state(hvac={"hvac_defrost": 0}))
+        send = Mock(return_value={"service_type": 3, "msg_type": 1, "msg_content": {"code": 8}})
+        e = switch.XPengDefrostSwitch(c, SimpleNamespace(send_command_wait=send))
+        with self.assertRaises(Error):
+            await e.async_turn_on()
+        self.assertFalse(e.is_on)
+        self.assertFalse(e._attr_assumed_state)
+
+    async def test_charge_limit_refusal_does_not_change_reported_limit(self):
+        c = coordinator(state(charge={"max_range_charge": 80}))
+        send = Mock(return_value={"service_type": 4, "msg_type": 1, "msg_content": {"code": 10401}})
+        e = number.XPengChargeLimit(c, SimpleNamespace(send_command_wait=send))
+        with self.assertRaises(Error):
+            await e.async_set_native_value(90)
+        self.assertEqual(e.native_value, 80)
 
     def test_compact_migration_preserves_existing_controller_ids(self):
         p = policy.CommandPolicy.from_preset("full")
@@ -312,6 +345,9 @@ class ClimateTests(unittest.IsolatedAsyncioTestCase):
             layout.include_legacy_entity(entry(), p, "number", "fan_speed_control")
         )
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

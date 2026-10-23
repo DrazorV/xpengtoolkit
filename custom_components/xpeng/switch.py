@@ -236,7 +236,7 @@ class XPengDefrostSwitch(XPengEntity, SwitchEntity):
     _attr_name = "Front defrost"
     _attr_translation_key = "defrost_switch"
     _attr_icon = "mdi:car-defrost-front"
-    _attr_assumed_state = True
+    _attr_assumed_state = False
 
     def __init__(
         self, coordinator: XPengDataCoordinator, mqtt_client: XPengMQTTClient
@@ -244,42 +244,27 @@ class XPengDefrostSwitch(XPengEntity, SwitchEntity):
         super().__init__(coordinator)
         self._mqtt_client = mqtt_client
         self._attr_unique_id = f"xpeng_{self._vin}_defrost_switch"
-        self._optimistic_state: bool | None = None
-        self._optimistic_until: float = 0
 
     @property
     def is_on(self) -> bool | None:
-        if self._optimistic_state is not None and time.monotonic() < self._optimistic_until:
-            return self._optimistic_state
-        self._optimistic_state = None
         if not self.coordinator.data:
             return None
-        hvac = (
-            self.coordinator.data
-            .get("msg_content", {})
-            .get("instant", {})
-            .get("hvac", {})
-        )
-        return hvac.get("hvac_defrost") == 1 if hvac else None
+        hvac = self.coordinator.data.get("msg_content", {}).get("instant", {}).get("hvac", {})
+        state = hvac.get("hvac_defrost")
+        return state == 1 if state in (0, 1) else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._guard()
-        self._optimistic_state = True
-        self._optimistic_until = time.monotonic() + 30
-        self.async_write_ha_state()
-        await self.hass.async_add_executor_job(
-            self._mqtt_client.send_command,
-            self._vin, 3, {"cmd_type": 4, "cmd_value": 1},
+        await async_send_confirmed(
+            self.hass, self._mqtt_client, self._vin, 3,
+            {"cmd_type": 4, "cmd_value": 1},
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._guard()
-        self._optimistic_state = False
-        self._optimistic_until = time.monotonic() + 30
-        self.async_write_ha_state()
-        await self.hass.async_add_executor_job(
-            self._mqtt_client.send_command,
-            self._vin, 3, {"cmd_type": 4, "cmd_value": 0},
+        await async_send_confirmed(
+            self.hass, self._mqtt_client, self._vin, 3,
+            {"cmd_type": 4, "cmd_value": 0},
         )
 
 

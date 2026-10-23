@@ -71,21 +71,61 @@ class CardRegistrationTests(unittest.IsolatedAsyncioTestCase):
         modules["homeassistant.components.frontend"].add_extra_js_url = (
             lambda hass, url: self.extra.append(url)
         )
+        modules["homeassistant.components.frontend"].remove_extra_js_url = lambda hass, url: self.extra.remove(url)
         modules["homeassistant.components.http"].StaticPathConfig = StaticPathConfig
         modules["homeassistant.components.lovelace.resources"].ResourceStorageCollection = StorageResources
         self.patcher = patch.dict(sys.modules, modules)
         self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
-    def hass(self, resources, *, legacy=False):
+    def hass(self, resources, *, legacy=False, enabled=True):
         async def executor(fn):
             return fn()
         lovelace = {"resources": resources} if legacy else SimpleNamespace(resources=resources)
         return SimpleNamespace(
             data={"lovelace": lovelace},
+            config_entries=SimpleNamespace(async_entries=lambda domain: [SimpleNamespace(entry_id="car", options={"enable_vehicle_card": enabled})]),
             http=SimpleNamespace(async_register_static_paths=AsyncMock()),
             async_add_executor_job=executor,
         )
+
+    async def test_default_does_not_install_or_migrate_anything(self):
+        old = {"id": "manual", "url": "/local/xpeng-vehicle-card/xpeng-vehicle-card.js", "type": "module"}
+        resources = StorageResources([old])
+        hass = self.hass(resources, enabled=False)
+        await frontend.async_setup_card(hass)
+        self.assertEqual(resources.items, [old])
+        self.assertFalse(resources.loaded)
+        hass.http.async_register_static_paths.assert_not_awaited()
+        self.assertEqual(self.extra, [])
+
+    async def test_disabling_cleans_only_managed_resource(self):
+        other = {"id": "vacuum", "url": "/local/vacuum.js", "type": "module"}
+        resources = StorageResources([other])
+        hass = self.hass(resources)
+        await frontend.async_setup_card(hass)
+        hass.config_entries.async_entries = lambda domain: []
+        await frontend.async_setup_card(hass)
+        self.assertEqual(resources.items, [other])
+
+    async def test_removing_one_vehicle_keeps_resource_for_another_opted_in_vehicle(self):
+        resources = StorageResources()
+        hass = self.hass(resources)
+        await frontend.async_setup_card(hass)
+        hass.config_entries.async_entries = lambda domain: [
+            SimpleNamespace(entry_id="second", options={"enable_vehicle_card": True})
+        ]
+        await frontend.async_remove_card(hass, "car")
+        self.assertEqual(len(resources.items), 1)
+        await frontend.async_remove_card(hass, "second")
+        self.assertEqual(resources.items, [])
+
+    async def test_yaml_cleanup_stops_global_module_loading(self):
+        hass = self.hass(SimpleNamespace(data=[]))
+        await frontend.async_setup_card(hass)
+        self.assertEqual(len(self.extra), 1)
+        await frontend.async_remove_card(hass, "car")
+        self.assertEqual(self.extra, [])
 
     async def test_clean_install_ships_and_registers_one_module(self):
         resources = StorageResources()

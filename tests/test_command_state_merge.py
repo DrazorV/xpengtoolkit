@@ -123,6 +123,7 @@ def _coordinator_with(cached):
     coord = object.__new__(coordinator.XPengDataCoordinator)
     coord.vin = "L1NNSGHA3SB123456"
     coord._last_full_data = cached
+    coord._baseline_sink = None
     return coord
 
 
@@ -457,6 +458,31 @@ class TestASeatPushUpdatesTheState(unittest.TestCase):
         self.assertEqual(seat["left_rear_seat_heat"], 0)
         # The seat that did not change keeps its value.
         self.assertEqual(seat["passenger_seat_heat"], 1)
+
+
+class CommandBaseline(unittest.TestCase):
+    def test_ack_updates_the_broker_baseline_before_the_next_partial(self):
+        from test_mqtt_state_delivery import _client, _Msg
+        client, delivered = _client()
+        coord = _coordinator_with(_cached_state())
+        coord._baseline_sink = client.adopt_state
+        coord.last_data_timestamp = 123.0
+        for subsystem, content in ((3, {"hvac_temp": 22.0}),
+                                   (12, {"front_left_window_position": 100})):
+            self.assertTrue(coord._merge_command_state({
+                "service_type": subsystem, "code": 200, "content": content,
+            }))
+        self.assertEqual(client._last_full_content, coord._last_full_data["msg_content"])
+        self.assertEqual(coord.last_data_timestamp, 123.0)
+        self.assertEqual(delivered, [])
+        client._on_message(None, None, _Msg({
+            "service_type": 19, "msg_type": 1,
+            "msg_content": {"code": 200, "instant": {"door": {"passenger_door_lock_st": 0}}},
+        }))
+        self.assertEqual(len(delivered), 1)
+        instant = delivered[0]["msg_content"]["instant"]
+        self.assertEqual(instant["hvac"]["hvac_temp"], 22.0)
+        self.assertEqual(instant["window"]["front_left_window_position"], 100)
 
 
 class TestTheListenerDoesNotFlood(unittest.TestCase):

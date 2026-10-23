@@ -176,6 +176,15 @@ A handful of **diagnostic sensors** also poll themselves every 30 s, because
 their values change with no data arriving at all: credential age, polling
 status, the next-poll estimate.
 
+The REST poll also carries a **fallback for the energy fields**. When the push
+stream has been silent for more than five minutes, the widget snapshot's state
+of charge, range and charge-port statuses are merged in, so the battery and
+range sensors keep moving while the fan-out is stuck. That merge is the fresher
+source, and since 0.6.25 the MQTT client's own partial-merge baseline is updated
+with it - otherwise a later charge-less ping re-broadcast the frozen snapshot
+and put the value back, which is what made the battery sensor flip between two
+values every `parked_scan_interval`.
+
 ### The car does not get woken up
 
 How often the integration *asks* the car for a fresh frame depends on what the
@@ -264,15 +273,17 @@ remain available in compact mode. See [controls and migration](docs/CONTROLS.md)
 
 ### Reusable dashboard card
 
-From fork release **0.7.5**, the **XPENG Vehicle** card is included with the
-integration. Update or install through HACS, restart Home Assistant, refresh the
-browser, then use **Edit dashboard → Add card → XPENG Vehicle** in any dashboard.
-The integration registers one shared resource and updates its browser-cache URL
-when the bundled JavaScript changes. Existing manually installed storage-mode
-resources migrate automatically; existing dashboard cards keep their settings.
-See the [card guide](lovelace/xpeng-vehicle-card/README.md) for YAML resources,
-multiple cars, manual installation and supported controls. No separate dashboard
-or sidebar page is created. Requires Home Assistant 2024.7 or later.
+From **0.6.26**, the optional **XPENG Vehicle** card ships with the integration.
+Configure at least one vehicle, then opt in under **Configure → Install and manage
+the XPENG Vehicle dashboard card** (off by default). Refresh the browser and use
+**Edit dashboard → Add card → XPENG Vehicle** in any dashboard.
+
+Opting in allows the integration to register/update one shared resource and
+migrate matching legacy local resources. Turning it off for every vehicle, or
+removing the last opted-in vehicle, removes the managed resource. Dashboard
+layouts are never edited. See the [card guide](lovelace/xpeng-vehicle-card/README.md)
+for YAML resources and manual installation. Requires Home Assistant 2024.7.
+Read the [0.6.26 upgrade and downgrade notes](docs/RELEASE_NOTES_0.6.26.md) before upgrading.
 
 ### Climate protocol and feedback
 
@@ -941,6 +952,27 @@ all: XPENG's cloud push fan-out stalls while the socket still looks healthy, and
 a frame carried coordinates and `coord_valid=` whether the car considered them a
 current fix.
 
+### The battery percentage and the range flip between two values
+
+A sawtooth on the battery (or range) history - alternating by a percent or two
+on a fixed rhythm - is a data artefact, not the pack. State of charge is
+reported to whole percent, and while the push stream is quiet two readings of it
+exist: the last one a push carried, and the live one from the REST widget
+fallback. Before 0.6.25 a charge-less MQTT frame re-broadcast the frozen push
+value over the fallback's merge, so the sensors ping-ponged. Now:
+
+- the fallback merge is what the MQTT client's partial-merge baseline holds, so
+  a later ping cannot undo it;
+- a state whose SoC is more than one percent above what is held, while the car
+  is parked and not charging, is refused as an older snapshot - a parked, idle
+  car's charge can only fall - and it is refused as *data*, so a fan-out that
+  only resends it still ages into the watchdog's force-upload.
+
+Watch for `Ignoring a vehicle state from the push fanout: SOC ... while parked`
+in the log; what is left on the graph after that is the real trend at
+whole-percent resolution. A rise of more than one percent while parked and not
+charging does not happen - if one appears, that line names it.
+
 ### Nothing is updating, and the log does not say why
 
 - **The renewal app records the whole onboarding run** - every step, plus whatever
@@ -1068,7 +1100,7 @@ strictly passive and sends queries only, at the price of staler sensors. The int
 watchdog honours it too, degrading to a passive query instead of a force-upload.
 
 **Window and charge-port controls are separate.** Window opening vents. The
-0.7.2 release uses the official app's service-12 close command. A P7+ owner
+0.6.26 release uses the official app's service-12 close command. A P7+ owner
 confirmed physical ventilation and closing on 22 October 2026. Full opening and arbitrary positions are not advertised.
 Manual charge flaps retain state without motorized commands when known from
 model configuration or when the owner turns off **Motorized charge-port controls**.

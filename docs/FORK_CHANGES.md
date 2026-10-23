@@ -1,6 +1,30 @@
 # Fork development
 
-Upstream baseline: 0.6.20 (dc0134c). Domain and entity identifiers remain compatible.
+Upstream baseline: 0.6.25 (321460b). Domain and entity identifiers remain compatible.
+
+## 0.6.26 - upstream review fixes
+
+Merged the reviewed contribution from upstream PR
+[xpengtoolkit/xpengtoolkit#5](https://github.com/xpengtoolkit/xpengtoolkit/pull/5),
+commit `f7f8233`, together with upstream 0.6.25's parked SOC/baseline fix.
+The upstream PR remains open for maintainer review; inclusion here does not mean
+upstream approval. The merge retains both repositories' ancestry.
+
+- Correlate command acknowledgements with request identity and confirm legacy
+  window, charging, charge-port, charge-limit and front-defrost command paths.
+- Keep raw fan telemetry in compact mode and propagate measured command state
+  into the MQTT baseline without advancing snapshot freshness.
+- Make dashboard-card registration an explicit, default-off vehicle option with
+  shared-resource cleanup. Existing card users must enable **Install and manage
+  the XPENG Vehicle dashboard card** under the integration's Configure options
+  after upgrading; their dashboard card configuration is preserved.
+- Make standard unittest discovery safe and run it in CI, alongside isolated
+  regression scripts and card tests. Update permission/targeting docs, dependency
+  bounds and SHA-pinned action references.
+
+Fork publishing settings, issue links, card behavior and provenance notes are
+preserved. No new command encoding or additional physical vehicle validation is
+claimed. See [upgrade and downgrade notes](RELEASE_NOTES_0.6.26.md).
 
 ## Development and review
 

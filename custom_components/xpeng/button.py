@@ -21,6 +21,7 @@ from .command_policy import (
     GROUP_SECURING,
     default_policy,
 )
+from .command_execution import async_send_confirmed
 from .const import COMMAND_NOT_SENT_MESSAGE, DOMAIN
 from .coordinator import XPengDataCoordinator
 from .entity import XPengEntity
@@ -257,6 +258,12 @@ class XPengCommandButton(XPengEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         self._guard(self._policy_action)
+        if self._service_type in (3, 4, 12):
+            await async_send_confirmed(
+                self.hass, self._mqtt_client, self._vin, self._service_type,
+                self._msg_content, self._msg_type,
+            )
+            return
         sent = await self.hass.async_add_executor_job(
             self._mqtt_client.send_command,
             self._vin,

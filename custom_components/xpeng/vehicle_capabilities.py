@@ -219,7 +219,8 @@ for _prefix, _feature in (
 def model_flags(vehicle_type: str | None, vehicle_name: str | None) -> dict[str, bool]:
     """Explicit app 3.12.0 model facts; no fallback assumptions for unknown models."""
     profile = MODEL_FEATURES.get(vehicle_type, {})
-    return {**profile.get(vehicle_type, {}), **profile.get(vehicle_name, {})}
+    # Human-readable vehicle names are not variant codes in this catalog.
+    return dict(profile.get(vehicle_type, {}))
 
 
 def from_coordinator(coordinator) -> VehicleCapabilities:

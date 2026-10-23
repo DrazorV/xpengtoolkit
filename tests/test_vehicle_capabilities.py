@@ -1,5 +1,8 @@
 """Feature discovery must not confuse missing data or readiness with support."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 import importlib.util
 from pathlib import Path
 import sys
@@ -156,6 +159,9 @@ class Registry(unittest.TestCase):
             [r.disabled_by for r in records], [None, "user", "config_entry", None, None]
         )
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

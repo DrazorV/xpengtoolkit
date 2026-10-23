@@ -17,6 +17,7 @@ from homeassistant.helpers.storage import Store
 from . import poll_status
 from .capture import open_recorder
 from .command_gate import policy_for_entry
+from .energy_guard import soc_of
 from .replay_guard import is_replay, odometer_from_state
 from .sentinel_guard import with_previous_tpms
 from .watchdog_policy import (
@@ -628,6 +629,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up XPENG from a config entry."""
+    from .frontend import async_setup_card
+
+    await async_setup_card(hass)
     client_id = entry.data[CONF_CLIENT_ID]
     password = entry.data[CONF_PASSWORD]
     server = entry.data.get(CONF_SERVER, DEFAULT_SERVER)
@@ -945,6 +949,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 odometer, coordinator.max_odometer,
             )
             return False
+        # The energy-side replay check. While a car is parked its odometer does
+        # not move, so the check above cannot see a replayed snapshot - but a
+        # parked, idle car's state of charge cannot rise either. Keeping such a
+        # state out of this clock matters for the same reason: a fanout that
+        # only resends an older parked snapshot must still age into the
+        # watchdog's force-upload (see energy_guard.py for the measurement).
+        if coordinator.parked_energy_replay(data):
+            _LOGGER.warning(
+                "Ignoring a replayed vehicle state from the push fanout: SOC %s%% "
+                "is above the %s%% already held while parked — resending an older "
+                "snapshot",
+                soc_of(data), soc_of(coordinator.last_full_data),
+            )
+            return False
         was_parked = coordinator.vehicle_parked
         hass.loop.call_soon_threadsafe(
             _handle_vehicle_state, data, was_parked
@@ -1010,6 +1028,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.async_add_executor_job(mqtt_client.send_query, vin)
 
     mqtt_client.set_state_callback(_on_vehicle_state)
+    # The REST fallback merge happens in the coordinator, so the client's own
+    # partial-merge baseline has to be told about it - otherwise the next
+    # charge-less partial re-broadcasts the pre-merge snapshot over it.
+    coordinator.set_baseline_sink(mqtt_client.adopt_state)
     # A wake frame carries the tyre pressures as 0 before the TPMS sensors
     # answer; carry the last real readings forward instead of publishing a tyre
     # that reinflates two seconds later (see sentinel_guard.py).
@@ -2703,3 +2725,10 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
         _LOGGER.debug("Skipping reload — credential refresh only")
         return
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up the shared opt-in card after the last owning vehicle is removed."""
+    from .frontend import async_remove_card
+
+    await async_remove_card(hass, entry.entry_id)
