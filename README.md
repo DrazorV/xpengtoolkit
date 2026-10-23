@@ -607,6 +607,78 @@ Then configure the renewal app:
 The pair directory is live credentials on disk: `chmod 700`, and keep it out of any
 share.
 
+#### Standalone Docker (no Supervisor)
+
+Home Assistant **apps** (formerly add-ons) exist only on HAOS and Supervised - the
+Add-on Store does not exist on Container or Core. Both companions still work there,
+because an app is an ordinary container with an options file. Build the two images
+once (no prebuilt images are published; the Supervisor normally builds them on an
+HAOS box):
+
+```bash
+git clone https://github.com/xpengtoolkit/slider-solver
+git clone https://github.com/xpengtoolkit/xpengtoolkit
+docker build -t xpeng-slider-solver ./slider-solver/slider_solver
+docker build -t xpeng-renew ./xpengtoolkit/xpeng_renew
+```
+
+```yaml
+services:
+  xpeng-slider-solver:
+    image: xpeng-slider-solver
+    restart: unless-stopped
+    ports: ["8080:8080"]
+    environment:
+      SOLVER_TOKEN: "change-me"                  # same value in the renewal app
+
+  xpeng-renew:
+    image: xpeng-renew
+    restart: unless-stopped
+    depends_on: [xpeng-slider-solver]
+    ports: ["8090:8090"]                         # POST /renew, GET /healthz
+    environment:
+      EMAIL: "dedicated-account@example.com"     # never the phone-app account
+      PASSWORD: "that account's password"
+      SOLVER_URL: "http://xpeng-slider-solver:8080"
+      SOLVER_TOKEN: "change-me"
+      RENEW_TOKEN: "a-second-secret"             # bearer for POST /renew
+      PAIR_DIR: "/config/xpeng-secrets"
+      CORE_API: "http://homeassistant:8123/api"
+      SUPERVISOR_TOKEN: "<Home Assistant long-lived token>"
+      COMMAND_MODE: "safe_plus"
+    volumes:
+      - ./ha-config/xpeng-secrets:/config/xpeng-secrets
+      - ./ha-config/xpeng-certs:/config/xpeng-certs:ro
+      - xpeng-renew-data:/data
+
+volumes:
+  xpeng-renew-data:
+```
+
+The app's options become upper-case environment variables. Two of them replace
+Supervisor plumbing: `CORE_API` (default `http://supervisor/core/api`) points at the
+Core API, and `SUPERVISOR_TOKEN` is just the bearer - a **long-lived access token
+from an admin profile**, which also lets a fresh install create the entry by driving
+the config flow. Three mounts have to be right:
+
+* **`pair_dir` must be the same absolute path inside the Home Assistant container.**
+  The pair is not uploaded: `xpeng.import_credentials` is called with
+  `tokens_path`/`tenant_path` and Core reads those files itself, so mount the host
+  directory into *both* containers at the same path. `chmod 700` it - live
+  credentials.
+* **Certificates** at `/config/xpeng-certs` (or
+  `/config/custom_components/xpeng/certs`), read-only. The bundled onboarding code
+  looks in both.
+* **`/data`** must be writable: the device identity is pinned in
+  `/data/device_id.txt`, and a remembered identity outlasts a freshly generated one.
+
+Everything else is unchanged: `/healthz`, `POST /renew` with `RENEW_TOKEN`, and the
+6000 s scheduler (`RENEW_INTERVAL=0` disables it, for triggering from cron or an HA
+`rest_command`). There is no sidebar panel outside HAOS - that is an app ingress
+feature. The walkthrough and the full environment-variable table are in the docs:
+[Standalone Docker](https://xpengtoolkit.github.io/xpengtoolkit/guide/unattended-renewal#standalone-docker)
+and [App options](https://xpengtoolkit.github.io/xpengtoolkit/reference/app-options#environment-standalone-docker).
+
 ### Step 5 - watch it appear
 
 There is nothing to do here. When the app starts it looks for the integration, finds
@@ -838,6 +910,36 @@ measured in hours while the silence threshold is minutes, a parked car can sit i
 `Silent` and have the watchdog reconnect between polls; a value that returns to
 `Parked` is not a problem in itself. If a car you know is awake stays `Silent`
 alongside `Not authorized` refusals, treat it as the case above.
+
+### The car's location is stale after parking, or after a drive
+
+The tracker only knows where the car last **told** it. Position arrives in the car's
+own telemetry (`interval.drive.latitude/longitude`) - never from the REST poll - and
+a car that has gone to sleep stops sending it. A parked car is deliberately never
+force-woken on a schedule, so the last position is kept until something makes the
+car report again:
+
+- **The car wakes by itself** (a charge, a command, its own schedule) and the
+  position updates.
+- **Press `Wake vehicle`** - that request makes the car upload a full state. `Force
+  update` will not help: it asks passively, and a sleeping car answers with a stub.
+- **The silence watchdog** does it once automatically after 30 minutes without data,
+  capped at one force-upload per 12 hours (0.6.20+ adds a second allowance while the
+  car was moving). If that budget was spent earlier, a stalled session can leave the
+  map stale until you wake it.
+
+Two attributes on the tracker answer "is this position real?": `coord_valid` is the
+car's own GPS-validity flag, and `fix_age_s` is the age of the last position that was
+an actual fix. Since 0.6.24, a frame whose coordinates are the car's last known
+position (`coordValid` false) no longer moves the car - the last valid position is
+kept and flagged, instead of a stale coordinate being published as a live one.
+
+If the position did not move **even while driving**, the frames were not arriving at
+all: XPENG's cloud push fan-out stalls while the socket still looks healthy, and
+`Last data update` will be stale too. Enable debug logging for
+`custom_components.xpeng` and look for `Drive evidence:` lines - `gps=` says whether
+a frame carried coordinates and `coord_valid=` whether the car considered them a
+current fix.
 
 ### Nothing is updating, and the log does not say why
 
