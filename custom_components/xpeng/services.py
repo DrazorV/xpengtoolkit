@@ -13,6 +13,8 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from .climate_commands import power_payload, send_climate, temperature_payload
+from .hvac_schedules import async_manage_schedule, schedule_entry
 from .charge_port import controls_enabled
 from .command_gate import async_guard_service
 from .command_policy import default_policy, service_group
@@ -66,6 +68,7 @@ DEFAULT_HVAC_ACTION_TYPE = "AIR_CONDITION_OPEN"
 
 CREATE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
     {
+        vol.Optional("vehicle_entity_id"): cv.entity_id,
         vol.Required("start_time"): cv.string,
         vol.Optional("days_of_week", default=[]): vol.All(
             cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=1, max=7))]
@@ -78,6 +81,7 @@ CREATE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
 
 UPDATE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
     {
+        vol.Optional("vehicle_entity_id"): cv.entity_id,
         vol.Required("appointment_id"): cv.string,
         vol.Required("start_time"): cv.string,
         vol.Optional("days_of_week", default=[]): vol.All(
@@ -91,10 +95,14 @@ UPDATE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
 
 DELETE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
     {
+        vol.Optional("vehicle_entity_id"): cv.entity_id,
         vol.Required("appointment_id"): cv.string,
         vol.Optional("time_zone"): cv.string,
     }
 )
+
+
+LIST_HVAC_SCHEDULES_SCHEMA = vol.Schema({vol.Optional("vehicle_entity_id"): cv.entity_id})
 
 
 def _days_to_bitmask(days: list[int]) -> int:
@@ -218,17 +226,13 @@ def _get_entry_data(hass: HomeAssistant) -> dict[str, Any] | None:
 
 
 def _charge_port_controls_enabled(hass: HomeAssistant) -> bool:
-    """Whether this entry expects the charge-port commands to do anything.
-
-    A manual flap answers them with an error or with nothing, and no field says
-    which kind of flap a car has, so the owner records it as the
-    ``charge_port_controls`` option (see charge_port.controls_enabled). The
-    services check it for the same reason the buttons are not created: a call
-    that silently cannot work is worse than one that says so.
-    """
+    """Respect the owner option and known model support; unknown stays allowed."""
     entry_data = _get_entry_data(hass) or {}
     entry = entry_data.get("entry")
-    return controls_enabled(getattr(entry, "options", None) or {})
+    from .vehicle_capabilities import from_coordinator
+
+    return (controls_enabled(getattr(entry, "options", None) or {})
+            and from_coordinator(entry_data.get("coordinator")).support("charge_port_control") is not False)
 
 
 def _build_snapshot(coordinator: Any, reason: str) -> dict[str, Any]:
@@ -309,23 +313,33 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     """Register XPENG vehicle command services."""
 
     async def handle_climate_on(call: ServiceCall) -> None:
-        temp = call.data.get("temperature", 22.0)
-        duration = call.data.get("duration", 15)
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 6, "cmd_value": temp, "time": duration}
+        data = _get_entry_data(hass)
+        if not data:
+            raise HomeAssistantError("No live XPENG config entry")
+        c, client = data["coordinator"], data["mqtt_client"]
+        try:
+            target = temperature_payload(
+                c, call.data.get("temperature", 22.0), call.data.get("duration", 15)
+            )
+        except (TypeError, ValueError, OverflowError):
+            raise HomeAssistantError("Invalid climate target temperature") from None
+        await send_climate(hass, client, c, target)
+        await send_climate(
+            hass, client, c, power_payload(c, True, call.data.get("duration", 15))
         )
 
     async def handle_climate_off(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 1, "cmd_value": 0, "time": 0}
+        data = _get_entry_data(hass)
+        if not data:
+            raise HomeAssistantError("No live XPENG config entry")
+        await send_climate(
+            hass, data["mqtt_client"], data["coordinator"],
+            power_payload(data["coordinator"], False),
         )
 
     async def handle_close_windows(call: ServiceCall) -> None:
-        # The payload this service used to publish is the charge-port *open*
-        # command (service_type 4, cmd_type 3, cmd_value 1) and never moved a
-        # window - measured on a P7+ (2026-10-22). Refuse rather than send it.
-        raise HomeAssistantError(
-            translation_domain=DOMAIN, translation_key="window_command_unverified"
+        await hass.async_add_executor_job(
+            _send, hass, 12, {"cmd_type": 1, "cmd_value": 1}
         )
 
     async def handle_vent_windows(call: ServiceCall) -> None:
@@ -746,143 +760,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_create_hvac_schedule(call: ServiceCall) -> None:
-        start_time = _normalize_start_time(call.data["start_time"])
-        days = call.data.get("days_of_week", []) or []
-        enabled = call.data.get("enabled", True)
-        action_type = call.data.get("action_type", DEFAULT_HVAC_ACTION_TYPE)
-        time_zone = call.data.get("time_zone")
-        schedule_mask = _days_to_bitmask(days)
-        cycle_type = 1 if schedule_mask else 0
-        is_valid = 1 if enabled else 0
-        entry_data = _get_entry_data(hass)
-        if not entry_data:
-            return
-        entry = entry_data.get("entry")
-        coordinator = entry_data["coordinator"]
-        if not entry:
-            _LOGGER.error("No config entry available for create_hvac_schedule")
-            return
-        from .xpeng_api import create_aircondition_appointment
-        from .__init__ import _load_api_context
-        tokens, tenant = _load_api_context(entry)
-        if not tokens or not tenant:
-            _LOGGER.error("No API credentials for create_hvac_schedule")
-            return
-        try:
-            result = await hass.async_add_executor_job(
-                create_aircondition_appointment,
-                None, tenant, tokens, coordinator.vin,
-                action_type, start_time, cycle_type, schedule_mask, is_valid,
-                time_zone, 1,
-            )
-            _LOGGER.info(
-                "Created HVAC schedule: start_time=%s schedule=%s cycle=%s valid=%s result=%s",
-                start_time, schedule_mask, cycle_type, is_valid, result,
-            )
-        except Exception as err:
-            _LOGGER.warning("create_hvac_schedule failed: %s", err)
+        params = dict(call.data)
+        params["start_time"] = _normalize_start_time(params["start_time"])
+        await async_manage_schedule(hass, params, "create")
 
     async def handle_update_hvac_schedule(call: ServiceCall) -> None:
-        appointment_id = call.data["appointment_id"]
-        start_time = _normalize_start_time(call.data["start_time"])
-        days = call.data.get("days_of_week", []) or []
-        enabled = call.data.get("enabled", True)
-        action_type = call.data.get("action_type", DEFAULT_HVAC_ACTION_TYPE)
-        time_zone = call.data.get("time_zone")
-        schedule_mask = _days_to_bitmask(days)
-        cycle_type = 1 if schedule_mask else 0
-        is_valid = 1 if enabled else 0
-        entry_data = _get_entry_data(hass)
-        if not entry_data:
-            return
-        entry = entry_data.get("entry")
-        coordinator = entry_data["coordinator"]
-        if not entry:
-            _LOGGER.error("No config entry available for update_hvac_schedule")
-            return
-        from .xpeng_api import update_aircondition_appointment
-        from .__init__ import _load_api_context
-        tokens, tenant = _load_api_context(entry)
-        if not tokens or not tenant:
-            _LOGGER.error("No API credentials for update_hvac_schedule")
-            return
-        try:
-            result = await hass.async_add_executor_job(
-                update_aircondition_appointment,
-                None, tenant, tokens, coordinator.vin,
-                appointment_id, action_type, start_time, cycle_type,
-                schedule_mask, is_valid, time_zone, "UPDATE",
-            )
-            _LOGGER.info(
-                "Updated HVAC schedule %s: start_time=%s schedule=%s result=%s",
-                appointment_id, start_time, schedule_mask, result,
-            )
-        except Exception as err:
-            _LOGGER.warning("update_hvac_schedule failed: %s", err)
+        params = dict(call.data)
+        params["start_time"] = _normalize_start_time(params["start_time"])
+        await async_manage_schedule(hass, params, "update")
 
     async def handle_delete_hvac_schedule(call: ServiceCall) -> None:
-        appointment_id = call.data["appointment_id"]
-        time_zone = call.data.get("time_zone")
-        entry_data = _get_entry_data(hass)
-        if not entry_data:
-            return
-        entry = entry_data.get("entry")
-        coordinator = entry_data["coordinator"]
-        if not entry:
-            _LOGGER.error("No config entry available for delete_hvac_schedule")
-            return
-        from .xpeng_api import delete_aircondition_appointment
-        from .__init__ import _load_api_context
-        tokens, tenant = _load_api_context(entry)
-        if not tokens or not tenant:
-            _LOGGER.error("No API credentials for delete_hvac_schedule")
-            return
-        try:
-            result = await hass.async_add_executor_job(
-                delete_aircondition_appointment,
-                None, tenant, tokens, coordinator.vin, appointment_id, time_zone,
-            )
-            _LOGGER.info(
-                "Deleted HVAC schedule %s: result=%s", appointment_id, result,
-            )
-        except Exception as err:
-            _LOGGER.warning("delete_hvac_schedule failed: %s", err)
+        params = dict(call.data)
+        await async_manage_schedule(hass, params, "delete")
 
     async def handle_list_hvac_schedules(call: ServiceCall) -> None:
-        entry_data = _get_entry_data(hass)
-        if not entry_data:
-            return
-        entry = entry_data.get("entry")
-        coordinator = entry_data["coordinator"]
-        if not entry:
-            _LOGGER.error("No config entry available for list_hvac_schedules")
-            return
-        from .xpeng_api import list_aircondition_appointments
-        from .__init__ import _load_api_context
-        tokens, tenant = _load_api_context(entry)
-        if not tokens or not tenant:
-            _LOGGER.error("No API credentials for list_hvac_schedules")
-            return
-        try:
-            result = await hass.async_add_executor_job(
-                list_aircondition_appointments,
-                None, tenant, tokens, coordinator.vin, "AIR_CONDITION", None,
-            )
-            _LOGGER.info("HVAC schedules: %s", result)
-            # Push the fetched schedules back into the coordinator so the
-            # HVAC schedule calendar entity refreshes immediately (instead of
-            # waiting for the next REST poll, which can be up to 1h when parked).
-            if isinstance(result, dict):
-                items = result.get("list") or []
-                if isinstance(items, list):
-                    nxt = result.get("nextStartTime")
-                    coordinator.set_rest_data({
-                        "hvac_schedules": items,
-                        "hvac_next_start_time": nxt if isinstance(nxt, str) else None,
-                    })
-                    _LOGGER.info("Refreshed calendar with %d HVAC schedule(s)", len(items))
-        except Exception as err:
-            _LOGGER.warning("list_hvac_schedules failed: %s", err)
+        params = dict(call.data)
+        await async_manage_schedule(hass, params, "list")
 
     async def handle_send_navigation(call: ServiceCall) -> None:
         name = call.data["name"]
@@ -965,7 +858,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         group = service_group(service)
 
         async def _gated(call: ServiceCall) -> None:
-            entry_data = _get_entry_data(hass) or {}
+            if service in (SERVICE_CREATE_HVAC_SCHEDULE, SERVICE_UPDATE_HVAC_SCHEDULE,
+                           SERVICE_DELETE_HVAC_SCHEDULE, SERVICE_LIST_HVAC_SCHEDULES):
+                entry_data = schedule_entry(hass, call.data)
+            else:
+                entry_data = _get_entry_data(hass) or {}
             policy = entry_data.get("command_policy") or default_policy()
             await async_guard_service(hass, call, service, group, policy)
             await handler(call)
@@ -1013,7 +910,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     _register(SERVICE_CREATE_HVAC_SCHEDULE, handle_create_hvac_schedule, CREATE_HVAC_SCHEDULE_SCHEMA)
     _register(SERVICE_UPDATE_HVAC_SCHEDULE, handle_update_hvac_schedule, UPDATE_HVAC_SCHEDULE_SCHEMA)
     _register(SERVICE_DELETE_HVAC_SCHEDULE, handle_delete_hvac_schedule, DELETE_HVAC_SCHEDULE_SCHEMA)
-    _register(SERVICE_LIST_HVAC_SCHEDULES, handle_list_hvac_schedules)
+    _register(SERVICE_LIST_HVAC_SCHEDULES, handle_list_hvac_schedules, LIST_HVAC_SCHEDULES_SCHEMA)
     _register(SERVICE_SEND_NAVIGATION, handle_send_navigation, SEND_NAVIGATION_SCHEMA)
     _register(SERVICE_FORCE_CALENDAR_SYNC, handle_force_calendar_sync)
 
