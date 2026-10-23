@@ -1,5 +1,8 @@
 """REST feature ingestion remains optional and excludes unrelated vehicle data."""
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 import ast
 import json
 import logging
@@ -12,6 +15,8 @@ from unittest.mock import Mock
 PKG = Path(__file__).resolve().parents[1] / "custom_components/xpeng"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_vehicle_capabilities as setup
+
+_IMPORTS.use(__import__("test_vehicle_capabilities"))
 
 
 class RestFeatureTests(unittest.TestCase):
@@ -88,6 +93,9 @@ class RestFeatureTests(unittest.TestCase):
             self.assertEqual(result["vehicle_type_code"], "FJ")
             self.assertIn("remote_capabilities", result)
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

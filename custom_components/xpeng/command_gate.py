@@ -24,7 +24,7 @@ targets at all), so Home Assistant's per-entity permission checks never run for
 them. That is exactly the hole the caller check fills. It is deliberately
 written here instead of using ``homeassistant.helpers.service.verify_domain_control``
 because that helper's signature changed in HA 2026.1 (``(hass, domain)`` became
-``(domain)``) and this integration still supports 2024.6.0.
+``(domain)``) and this integration still supports 2024.7.0.
 """
 
 from __future__ import annotations

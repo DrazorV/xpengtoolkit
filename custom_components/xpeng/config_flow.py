@@ -41,6 +41,7 @@ from .command_policy import (
     SELECTABLE_PRESETS,
 )
 from .entity_layout import CONF_LEGACY_ENTITIES, legacy_entities_enabled
+from .frontend import CONF_ENABLE_VEHICLE_CARD
 from .xpeng_api import resolve_cert_dir
 from .const import (
     AUTH_METHOD_EMAIL,
@@ -1665,6 +1666,10 @@ class XPengOptionsFlow(OptionsFlow):
                         )
                     ),
                     vol.Optional(CONF_ALLOW_WAKE, default=current_policy.allow_wake): bool,
+                    vol.Optional(
+                        CONF_ENABLE_VEHICLE_CARD,
+                        default=bool(current.get(CONF_ENABLE_VEHICLE_CARD, False)),
+                    ): bool,
                     vol.Optional(
                         CONF_LEGACY_ENTITIES, default=current[CONF_LEGACY_ENTITIES]
                     ): bool,

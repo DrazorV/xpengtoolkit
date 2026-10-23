@@ -37,7 +37,6 @@ REPLACEMENTS = {
     ("sensor", "max_charge"): ("number", "charge_limit_control", (GROUP_CHARGING,)),
     ("sensor", "slow_charge_port"): ("cover", "charge_port_cover", (GROUP_CHARGING,)),
     ("sensor", "set_temperature"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
-    ("sensor", "hvac_fan_speed"): ("climate", "cabin_climate", (GROUP_COMFORT,)),
     ("sensor", "trunk_power_timer"): (
         "number",
         "trunk_power_timer_control",

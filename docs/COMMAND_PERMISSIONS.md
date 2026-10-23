@@ -1,15 +1,12 @@
 # Command permissions - what the integration may do to the car
 
-An XPENG account can unlock a car, and this integration holds one. It exposes 42
-command services plus ~30 command entities, so the install needs a ceiling on what it
-is allowed to *do* - independent of who is asking.
-
-It also needs its own, because Home Assistant cannot supply one here. Every XPENG
-command is a **target-less service** (`xpeng.unlock` takes no `entity_id` at all), so
-core's per-entity `read`/`control` permissions never run for it. Home Assistant's own
-user and group permissions still apply to the entities you expose; the policy below is
-what applies to everything else - automations, scripts, voice assistants, dashboards
-and long-lived tokens - and to no-user callers as well.
+Several global `xpeng.*` services, such as `xpeng.unlock`, resolve the first
+configured vehicle and do not take an entity target. Native entity services
+(`cover.close_cover`, climate and switch actions) use `target.entity_id` and Home
+Assistant's entity permissions, in addition to the integration policy. The four
+HVAC schedule services take `vehicle_entity_id`; it is required for multiple
+vehicles and checked against the caller's permissions and the selected entry's
+policy. The policy also applies to automations and callers without a user.
 
 ## The three states
 
@@ -36,11 +33,11 @@ changes it later, and *Custom* there opens the per-group matrix.
 | Capability group | Services | Entities you will see |
 |---|---|---|
 | **Queries and data** | `capture_snapshot`, `charging_hint`, `check_ota`, `clear_stuck_commands`, `force_calendar_sync`, `force_update`, `list_hvac_schedules`, `send_navigation` | Force update, Wake vehicle, Query X-Guard (buttons) |
-| **Comfort and climate** | `climate_off`, `climate_on`, `create_hvac_schedule`, `defrost_off`, `defrost_on`, `delete_hvac_schedule`, `update_hvac_schedule` | Climate; Front defrost; Fan speed; Driver/passenger seat heating and ventilation; Steering wheel heating; one switch per HVAC schedule |
+| **Comfort and climate** | `climate_off`, `climate_on`, `create_hvac_schedule`, `defrost_off`, `defrost_on`, `delete_hvac_schedule`, `update_hvac_schedule` | Climate (including front defrost); capability-gated climate-mode switches including Pet mode and Sterilisation; seat heating/ventilation and steering-wheel selects; HVAC schedule switches. Raw fan telemetry remains; fan control is withheld. Legacy front-defrost switch is optional. |
 | **Lights and alerts** | `flash_lights`, `honk_horn` | Flash lights, Honk horn (buttons); Parking lights (switch) |
-| **Charging** | `close_charge_port`, `open_charge_port`, `set_charge_limit`, `start_charge`, `stop_charge` | Start/stop charge and open/close the charge port (buttons; the port buttons are absent when **Motorized charge-port controls** is off); Charge limit (number) |
-| **Securing actions** | `close_trunk`, `close_windows`, `lock`, `sentinel_on` | Door lock (locking); Close windows - present but refuses, no verified command - Close trunk (buttons); X-Guard (arming); Sentinel sensitivity (number) |
-| **Access actions** | `open_trunk`, `open_windows`, `sentinel_off`, `unlock`, `vent_windows` | Door lock (unlocking); Open trunk, Open windows, Vent windows (buttons - the two window ones both send the verified *vent* command); X-Guard (disarming) |
+| **Charging** | `close_charge_port`, `open_charge_port`, `set_charge_limit`, `start_charge`, `stop_charge` | Charging switch, charge-limit number and charge-port cover. Motorized actions require model support and the owner option. Paired charge/port buttons are legacy-only. |
+| **Securing actions** | `close_trunk`, `close_windows`, `lock`, `sentinel_on` | Door lock (locking), trunk/window covers (closing), X-Guard (arming), sentinel-sensitivity number; corresponding legacy buttons when enabled. Window close uses service 12 and waits for acknowledgement. |
+| **Access actions** | `open_trunk`, `open_windows`, `sentinel_off`, `unlock`, `vent_windows` | Door lock (unlocking), trunk/window covers (opening or ventilation), X-Guard (disarming); corresponding legacy buttons when enabled. Window opening means ventilation, not full opening. |
 | **Accessory power** | `trunk_power_off`, `trunk_power_on` | Trunk power - the V2L outlet (switch); Trunk power timer (number) |
 | **Firmware and OTA** | `auto_upgrade_off`, `auto_upgrade_on`, `cancel_ota`, `ota_feedback`, `trigger_ota` | OTA auto-upgrade (switch) |
 | **Advanced and raw commands** | `execute_scene`, `send_raw_mqtt`, `toggle_scene` | none - these are services only |
@@ -141,3 +138,22 @@ set of car keys.
   creating one).
 * A stored idea of the mode is never trusted on its own - the group values are
   authoritative, and the preset shown is derived from them, so the two cannot drift.
+
+## Climate modes and acknowledgement limits
+
+Pet mode, Sterilisation and the other climate modes intentionally use the
+**Comfort and climate** group, so supported modes are reachable under Safe and
+Safe Plus. Choose Read only/Disabled for that group if remote climate operation
+should be withheld. Vehicle safety restrictions, including Rear Seat Reminder
+for Pet mode, remain enforced by the car.
+
+Confirmed controls require a matching message ID or an unambiguous echoed
+`cmd_type` and `cmd_value` in the same subsystem. A generic response for another
+command cannot confirm them. Firmware that rewrites the ID and omits that
+identity can still update telemetry, but the command times out rather than
+claiming success. Acceptance does not by itself prove physical movement.
+
+Window ventilation/closing was checked on a P7+; G6/G9 and other models still
+need their own physical validation. Legacy window buttons/services now use the
+same acknowledgement checks as the window cover. Charge-limit, charging,
+charge-port and legacy defrost controls also use that confirmed path.

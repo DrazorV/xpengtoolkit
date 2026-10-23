@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from _import_isolation import ImportIsolation
+_IMPORTS = ImportIsolation()
+
 import asyncio
 import ast
 import importlib.util
@@ -11,7 +14,7 @@ import types
 import unittest
 from enum import IntFlag
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 PKG = Path(__file__).resolve().parent.parent / "custom_components/xpeng"
 
@@ -334,6 +337,11 @@ class ChargingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LayoutTests(unittest.TestCase):
+    def test_compact_mode_preserves_raw_fan_speed_telemetry(self):
+        p = policy.CommandPolicy.from_preset("full")
+        self.assertTrue(layout.include_legacy_entity(entry(False), p, "sensor", "hvac_fan_speed"))
+        self.assertFalse(layout.include_legacy_entity(entry(False), p, "number", "fan_speed_control"))
+
     def test_new_entries_are_compact_old_entries_keep_ids(self):
         self.assertFalse(
             layout.legacy_entities_enabled(SimpleNamespace(version=2, options={}))
@@ -474,14 +482,14 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
             "not sent"
         )
         buttons = load("custom_components.xpeng.button", "button.py")
-        send = Mock(return_value=True)
+        send = Mock(return_value={"service_type": 12, "msg_type": 1, "msg_content": {"code": 200}})
         c = coordinator()
         h = SimpleNamespace(
             data={
                 "xpeng": {
                     "entry": {
                         "coordinator": c,
-                        "mqtt_client": SimpleNamespace(send_command=send),
+                        "mqtt_client": SimpleNamespace(send_command_wait=send),
                         "command_policy": c.command_policy,
                     }
                 }
@@ -495,6 +503,9 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
         send.assert_called_with(VIN, 12, {"cmd_type": 1, "cmd_value": 1}, 2)
         await by_key["vent_windows"].async_press()
         send.assert_called_with(VIN, 12, {"cmd_type": 1, "cmd_value": 2}, 2)
+        send.return_value = {"service_type": 12, "msg_type": 1, "msg_content": {"code": 8}}
+        with self.assertRaises(Error):
+            await by_key["close_windows"].async_press()
         compact = []
         await buttons.async_setup_entry(h, entry(False), compact.extend)
         self.assertEqual(
@@ -516,7 +527,7 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
             if isinstance(n, ast.AsyncFunctionDef)
             and n.name in {"handle_close_windows", "handle_vent_windows"}
         ]
-        send = Mock()
+        send = AsyncMock()
 
         async def executor(fn, *args):
             return fn(*args)
@@ -524,7 +535,7 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
         h = SimpleNamespace(async_add_executor_job=executor)
         ns = {
             "hass": h,
-            "_send": send,
+            "_send_confirmed": send,
             "ServiceCall": object,
             "HomeAssistantError": Error,
             "DOMAIN": "xpeng",
@@ -534,9 +545,12 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
             ns,
         )
         await ns["handle_close_windows"](None)
-        send.assert_called_with(h, 12, {"cmd_type": 1, "cmd_value": 1})
+        send.assert_awaited_with(h, 12, {"cmd_type": 1, "cmd_value": 1})
         await ns["handle_vent_windows"](None)
-        send.assert_called_with(h, 12, {"cmd_type": 1, "cmd_value": 2})
+        send.assert_awaited_with(h, 12, {"cmd_type": 1, "cmd_value": 2})
+        send.side_effect = Error("vehicle refused")
+        with self.assertRaisesRegex(Error, "vehicle refused"):
+            await ns["handle_close_windows"](None)
 
     async def test_partial_options_preserve_credentials_policy_and_wake_limit(self):
         from typing import Any
@@ -588,6 +602,9 @@ class LegacyAndOptionsTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["data"]["allow_wake"])
         self.assertFalse(result["data"]["legacy_entities"])
 
+
+
+_IMPORTS.finish(globals())
 
 if __name__ == "__main__":
     unittest.main()

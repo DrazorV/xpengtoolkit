@@ -111,3 +111,21 @@ No power-on or quick-heating/cooling command is implied by changing the target.
 The P7+ owner selected LO then HI in the official app with Bluetooth off on
 22 October 2026. Fresh recorded vehicle states showed 15.5 and 32.5, then 22 C and power off. This confirms the app/state
 mapping; the owner also confirmed both Home Assistant endpoint shortcuts.
+
+
+## Correlation, partial changes and validation scope
+
+Responses must match the subsystem and request ID, or unambiguously echo both
+`cmd_type` and `cmd_value` when an ID is rewritten. A generic subsystem reply
+does not confirm a request; firmware without usable identity will time out even
+if telemetry later reports that the command took effect. This deliberately
+prefers an honest uncertainty over another command's success or refusal.
+
+`xpeng.climate_on` sets the target before requesting power. If power is rejected
+after the target is accepted, the service reports a partial change; it does not
+attempt an unrequested rollback or claim the car stayed unchanged.
+
+Pet mode and Sterilisation belong to COMFORT and are allowed by Safe/Safe Plus
+only when the vehicle supports them. Vehicle state restrictions remain in force.
+Physical checks described here apply to the owner's P7+; G6/G9 and other models
+still need independent validation of these commands and acknowledgement identity.

@@ -18,6 +18,7 @@ from .hvac_schedules import async_manage_schedule, schedule_entry
 from .charge_port import controls_enabled
 from .command_gate import async_guard_service
 from .command_policy import default_policy, service_group
+from .command_execution import async_send_confirmed
 from .const import COMMAND_NOT_SENT_MESSAGE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -105,13 +106,6 @@ DELETE_HVAC_SCHEDULE_SCHEMA = vol.Schema(
 LIST_HVAC_SCHEDULES_SCHEMA = vol.Schema({vol.Optional("vehicle_entity_id"): cv.entity_id})
 
 
-def _days_to_bitmask(days: list[int]) -> int:
-    """Convert HA-style 1=Mon..7=Sun list into bit 0=Mon..bit 6=Sun bitmask."""
-    mask = 0
-    for d in days:
-        if 1 <= d <= 7:
-            mask |= 1 << (d - 1)
-    return mask
 
 
 def _normalize_start_time(value: str) -> str:
@@ -309,6 +303,18 @@ def _send(
         raise HomeAssistantError(COMMAND_NOT_SENT_MESSAGE)
 
 
+async def _send_confirmed(
+    hass: HomeAssistant, service_type: int, content: dict,
+) -> None:
+    """Use the same request serialization and response checks as entity controls."""
+    data = _get_entry_data(hass)
+    if not data:
+        raise HomeAssistantError("No live XPENG config entry")
+    await async_send_confirmed(
+        hass, data["mqtt_client"], data["coordinator"].vin, service_type, content,
+    )
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Register XPENG vehicle command services."""
 
@@ -324,9 +330,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except (TypeError, ValueError, OverflowError):
             raise HomeAssistantError("Invalid climate target temperature") from None
         await send_climate(hass, client, c, target)
-        await send_climate(
-            hass, client, c, power_payload(c, True, call.data.get("duration", 15))
-        )
+        try:
+            await send_climate(
+                hass, client, c, power_payload(c, True, call.data.get("duration", 15))
+            )
+        except HomeAssistantError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="climate_start_partial",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
     async def handle_climate_off(call: ServiceCall) -> None:
         data = _get_entry_data(hass)
@@ -338,16 +350,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_close_windows(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 12, {"cmd_type": 1, "cmd_value": 1}
-        )
+        await _send_confirmed(hass, 12, {"cmd_type": 1, "cmd_value": 1})
 
     async def handle_vent_windows(call: ServiceCall) -> None:
-        # The only window command verified to do anything: it vents. The old
-        # payload here was the charge-port close command.
-        await hass.async_add_executor_job(
-            _send, hass, 12, {"cmd_type": 1, "cmd_value": 2}
-        )
+        await _send_confirmed(hass, 12, {"cmd_type": 1, "cmd_value": 2})
 
     async def handle_sentinel_on(call: ServiceCall) -> None:
         sensitivity = call.data.get("sensitivity", 2)
@@ -436,14 +442,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def handle_start_charge(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 4, {"cmd_type": 1, "cmd_value": 1}
-        )
+        await _send_confirmed(hass, 4, {"cmd_type": 1, "cmd_value": 1})
 
     async def handle_stop_charge(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 4, {"cmd_type": 1, "cmd_value": 0}
-        )
+        await _send_confirmed(hass, 4, {"cmd_type": 1, "cmd_value": 0})
 
     async def handle_open_trunk(call: ServiceCall) -> None:
         await hass.async_add_executor_job(
@@ -458,43 +460,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def handle_open_charge_port(call: ServiceCall) -> None:
         if not _charge_port_controls_enabled(hass):
             raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="charge_port_control_disabled",
+                translation_domain=DOMAIN, translation_key="charge_port_control_disabled",
             )
-        await hass.async_add_executor_job(
-            _send, hass, 4, {"cmd_type": 3, "cmd_value": 1}
-        )
+        await _send_confirmed(hass, 4, {"cmd_type": 3, "cmd_value": 1})
 
     async def handle_close_charge_port(call: ServiceCall) -> None:
         if not _charge_port_controls_enabled(hass):
             raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="charge_port_control_disabled",
+                translation_domain=DOMAIN, translation_key="charge_port_control_disabled",
             )
-        await hass.async_add_executor_job(
-            _send, hass, 4, {"cmd_type": 3, "cmd_value": 0}
-        )
+        await _send_confirmed(hass, 4, {"cmd_type": 3, "cmd_value": 0})
 
     async def handle_set_charge_limit(call: ServiceCall) -> None:
-        limit = call.data["limit"]
-        await hass.async_add_executor_job(
-            _send, hass, 4, {"cmd_type": 2, "cmd_value": limit}
-        )
+        await _send_confirmed(hass, 4, {"cmd_type": 2, "cmd_value": call.data["limit"]})
 
     async def handle_defrost_on(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 4, "cmd_value": 1}
-        )
+        await _send_confirmed(hass, 3, {"cmd_type": 4, "cmd_value": 1})
 
     async def handle_defrost_off(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 3, {"cmd_type": 4, "cmd_value": 0}
-        )
+        await _send_confirmed(hass, 3, {"cmd_type": 4, "cmd_value": 0})
 
     async def handle_open_windows(call: ServiceCall) -> None:
-        await hass.async_add_executor_job(
-            _send, hass, 12, {"cmd_type": 1, "cmd_value": 2}
-        )
+        await _send_confirmed(hass, 12, {"cmd_type": 1, "cmd_value": 2})
 
     async def handle_execute_scene(call: ServiceCall) -> None:
         scene_id = call.data["scene_id"]

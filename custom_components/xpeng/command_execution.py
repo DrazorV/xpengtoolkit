@@ -42,8 +42,8 @@ async def async_send_confirmed(
 ) -> dict[str, Any]:
     """Await acceptance; measured telemetry remains the source of entity state.
 
-    Some vehicle firmware rewrites message IDs, so send_command_wait also matches
-    by service type. Acceptance never fabricates a physical state change.
+    Responses must match the message ID or echo the command identity as well
+    as its subsystem. Acceptance never fabricates a physical state change.
     """
     # Firmware may rewrite message IDs. Keep one request per subsystem in
     # flight so the service-type fallback cannot satisfy a different request.

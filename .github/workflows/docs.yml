@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
       # Configure the repository's Pages source as GitHub Actions in Settings.
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/setup-node@v4
         with:
           node-version: 20
