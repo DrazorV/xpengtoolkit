@@ -16,3 +16,10 @@ apply to this fork. Never push to the upstream remote without a separate request
   renewal app's vendored copy without tools/sync_renew_vendor.py and its tests.
 - Changes to command encodings require vehicle evidence. A successful publish or
   acknowledgement is not confirmation that a physical setting changed.
+
+## Upstream translation conventions
+
+- Keep translations/en.json and strings.json identical, with the same leaf keys in every language.
+- Run python3 tools/check_translations.py and python3 tests/test_translations.py after translation changes.
+- Set entity translation keys rather than _attr_name; keep English entity IDs through entity_names.py.
+- Follow docs/TRANSLATIONS.md when adding or translating entities.
