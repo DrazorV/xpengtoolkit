@@ -93,7 +93,20 @@ a manual **Run** silently does nothing. Gate on the entity's real state, as abov
 
 ## Act on a notification
 
-XPENG's notifications arrive as a bus event and as a sensor. Either form works.
+XPENG's notifications arrive as a bus event and as a sensor. They are **not
+interchangeable for capture**:
+
+- **`xpeng_notification`** fires once per new Message Centre item, across all six
+  categories. Its `data` carries the flattened record — `category`, `title`,
+  `message`, `msg_type`, `msg_id`, `timestamp`, `delay_s`, `source` and `raw`.
+  This is the trigger to use when every message must be recorded.
+- **`sensor.xpeng_<vehicle>_last_notification`** is easier to see and test in the
+  UI, and exposes the same fields as attributes — but its **state is the message
+  text**, so a second notification with the same text produces no state change.
+  Two identical X-Combo messages therefore look like one firing.
+
+The event trigger below keeps every firing, text included, in the Logbook — that
+is also how you prove a notification carried the text you configured:
 
 ```yaml
 - alias: XPENG notification
@@ -106,18 +119,27 @@ XPENG's notifications arrive as a bus event and as a sensor. Either form works.
   actions:
     - action: notify.persistent_notification
       data:
-        title: "{{ trigger.event.data.title }}"
+        title: "{{ trigger.event.data.title or 'XPENG notification' }}"
         message: "{{ trigger.event.data.message }}"
+    - action: logbook.log
+      data:
+        name: "XPENG {{ trigger.event.data.category }}"
+        message: >-
+          {{ trigger.event.data.message }} | msg_id={{ trigger.event.data.msg_id }}
+          claimed_at={{ trigger.event.data.timestamp }}
 ```
 
-Triggering on the sensor's state is easier to build in the UI, and needs no
-template:
+Triggering on the sensor's state is easier to build in the UI. Every field the
+event carries is also a top-level attribute, so the same category filter works:
 
 ```yaml
 - alias: XPENG sentry notification
   triggers:
     - trigger: state
       entity_id: sensor.xpeng_<vehicle>_last_notification
+      not_from:
+        - unknown
+        - unavailable
   conditions:
     - condition: template
       value_template: "{{ trigger.to_state.attributes.category == 'XPMOBILE-VEH' }}"
@@ -127,9 +149,16 @@ template:
         message: "{{ trigger.to_state.state }}"
 ```
 
+::: tip
+Step-by-step setup, the full field list and the troubleshooting checklist are in
+[Capture XPENG notifications](../tutorials/notification-capture).
+:::
+
 Only **new** notifications fire: the first poll after a restart records the
 existing inbox as a baseline, so a restart does not replay the Message Centre into
-your automations. See [Notifications](../guide/notifications).
+your automations. A rare `msg_type=3` push has no `category` (it is not a Message
+Centre item), so drop the category condition if you want those too. See
+[Notifications](../guide/notifications).
 
 ## Tell me when the session dies
 
@@ -185,5 +214,13 @@ car is plugged in at the time.
   commands.
 - `xpeng.capture_snapshot` writes every tracked field to
   `<config>/xpeng_snapshots/`, which is useful across an OTA update.
+- `xpeng.execute_scene` and `xpeng.toggle_scene` sit in the **Advanced and raw
+  commands** group, which is disabled on a new install — and a *local* X-Combo
+  cannot be one-key started from the cloud anyway, so a scene only runs from the
+  car or by firing it in the app. Do not build a test on `execute_scene`; see
+  [Command permissions](../reference/command-permissions).
+- Every actuating service is refused when its capability group is **Read only**
+  or **Disabled**. The charge-limit example above needs the **Charging** group on;
+  the default Safe Plus preset includes it.
 
 The full list, with every field, is on [Services](../reference/services).

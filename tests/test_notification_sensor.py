@@ -191,17 +191,72 @@ class TestNotificationSensor(unittest.TestCase):
         self.assertEqual(ent.extra_state_attributes["count"], 0)
         self.assertEqual(ent.extra_state_attributes["recent"], [])
 
+    def test_raw_record_is_exposed(self):
+        """The unparsed record must be readable from the entity, not just the event."""
+        raw = {
+            "id": "1558173270679261184",
+            "messageId": "1558173270679261184",
+            "read": False,
+            "createTime": "2026-10-09 09:44:17.0000",
+            "messageContent": '{"msgContent":{"description":"<p>x</p>"}}',
+        }
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"message": "Windows open", "raw": raw}], 1))
+        self.assertEqual(ent.extra_state_attributes["raw"], raw)
+        # `recent` passes the recorded dicts straight through, so it carries raw too.
+        self.assertEqual(ent.extra_state_attributes["recent"][-1]["raw"], raw)
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    def test_raw_is_none_when_the_record_has_none(self):
+        ent = XPengNotificationSensor(_FakeCoordinator([{"message": "old"}], 1))
+        self.assertIsNone(ent.extra_state_attributes["raw"])
 
-    def test_the_delay_is_reported_with_the_collection_time(self):
+    def test_category_title_and_msg_type_are_top_level_attributes(self):
+        """A state trigger only sees attributes: filtering on category needs them there.
+
+        The documentation example for a notification automation conditions on
+        `trigger.to_state.attributes.category`, so it has to exist at the top
+        level, not only inside `recent`.
+        """
+        ent = XPengNotificationSensor(_FakeCoordinator([{
+            "message": "Windows open",
+            "title": "XCOMBO-Benachrichtigung",
+            "category": "XPMOBILE-VEH",
+            "msg_type": "LINK",
+        }], 1))
+        attrs = ent.extra_state_attributes
+        self.assertEqual(attrs["category"], "XPMOBILE-VEH")
+        self.assertEqual(attrs["title"], "XCOMBO-Benachrichtigung")
+        self.assertEqual(attrs["msg_type"], "LINK")
+
+    def test_push_attributes_are_none_without_a_message_centre_record(self):
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"service_type": 12, "message": "x"}], 1))
+        attrs = ent.extra_state_attributes
+        self.assertIsNone(attrs["category"])
+        self.assertIsNone(attrs["title"])
+        self.assertIsNone(attrs["msg_type"])
+
+    def test_the_recorded_latency_is_reported_verbatim(self):
         """The whole point of the sensor for a polled source.
 
         Notifications are not pushed: they are polled, so the delay is the interval
-        plus whatever the API took. It used to be two timestamps to subtract by hand,
-        against a collection time that only the recorder held.
+        plus whatever the API took. record_notification() stamps it once, so the
+        sensor must report that number rather than recompute it against "now" -
+        recomputing made it grow on every read.
         """
+        claimed = "2026-10-27T21:33:46"
+        collected = "2026-10-27T10:34:15.320832+00:00"
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"message": "Charging started", "timestamp": claimed,
+              "collected_at": collected, "delay_s": 29.0}], 1))
+        attrs = ent.extra_state_attributes
+        self.assertEqual(attrs["delay_s"], 29.0)
+        self.assertEqual(attrs["collected_at"], collected)
+        # The claimed time is what XPENG said, not when the poll ran.
+        self.assertEqual(attrs["timestamp"], claimed)
+
+    def test_a_legacy_record_still_gets_a_delay(self):
+        """Records recorded before the stamping existed keep working."""
         sent = datetime.now() - timedelta(minutes=4)
         ent = XPengNotificationSensor(_FakeCoordinator(
             [{"message": "Charging started", "timestamp": sent.isoformat()}], 1))
@@ -215,3 +270,7 @@ if __name__ == "__main__":
         ent = XPengNotificationSensor(_FakeCoordinator(
             [{"message": "x", "timestamp": "not a time"}], 1))
         self.assertIsNone(ent.extra_state_attributes["delay_s"])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

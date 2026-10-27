@@ -68,6 +68,23 @@ def _setting_int(name: str, default: int) -> int:
         return default
 
 
+def _setting_bool(name: str, default: bool) -> bool:
+    """A boolean option or environment variable.
+
+    The Supervisor passes a real boolean, while a standalone ``docker run -e``
+    passes a string, so both are accepted. ``false``, ``0`` and an empty string are
+    off; anything else non-empty is on, which matches the Supervisor's parsing.
+    """
+    raw = os.environ.get(name.upper())
+    if raw is None:
+        raw = OPTIONS.get(name)
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() not in ("", "0", "false", "off", "no")
+
+
 #: The port the solver's own API listens on. Home Assistant serves the solver's
 #: sidebar panel on its own 8123, which is the address people copy.
 _SOLVER_API_PORT = 8080
@@ -127,6 +144,10 @@ SOLVER_URL, SOLVER_URL_NOTE = _solver_url(_setting("solver_url"))
 SOLVER_TOKEN = _setting("solver_token")
 RENEW_TOKEN = _setting("renew_token")
 PAIR_DIR = _setting("pair_dir", "/config/xpeng-secrets")
+#: Pin delivery to one config entry by its id. Empty means "the entry for this
+#: pair's VIN" (the title carries the last six characters), which is what makes a
+#: second car on a second account work without touching the app.
+ENTRY_ID = _setting("entry_id")
 # What the integration may do to the car, applied when this app creates the
 # config entry. Sent as a field on the import_step form, which is where the
 # integration asks the question (it must not be a step of its own: this app
@@ -143,6 +164,11 @@ RENEW_INTERVAL = _setting_int("renew_interval", 6000)
 # How often to ask Home Assistant whether the credentials are still good, so a session
 # that dies early is replaced on the next check rather than at the next tick.
 INVALID_POLL_INTERVAL = _setting_int("invalid_poll_interval", 300)
+#: Whether a successful renewal raises a persistent notification. A long-lived install
+#: renews roughly 24 times a day, so the success card is a per-install choice; failures
+#: still notify (after NOTIFY_AFTER consecutive attempts) either way. Default true keeps
+#: the behaviour every existing install had.
+NOTIFY_ON_SUCCESS = _setting_bool("notify_on_success", True)
 CORE_API = _setting("core_api", "http://supervisor/core/api")
 SUPERVISOR_TOKEN = os.environ.get("SUPERVISOR_TOKEN", "")
 
@@ -338,17 +364,11 @@ def _core_json(path: str, payload: dict | None = None, method: str = "POST"):
 
 def _existing_entry() -> dict | None:
     """This install's XPENG config entry, if it has one yet."""
-    status, body = _core_json("/config/config_entries/entry", method="GET")
-    if status != 200 or not isinstance(body, list):
-        return None
-    for entry in body:
-        if isinstance(entry, dict) and entry.get("domain") == "xpeng":
-            return entry
-    return None
+    return _entry_report()[1]
 
 
 def _entry_state() -> str:
-    """Whether an XPENG entry is present, absent, or unknown because HA is down.
+    """Whether this pair's XPENG entry is present, absent, missing, or unknown.
 
     The distinction is the whole of the failed-renewal window: "no entry" means
     bootstrap one from the pair, while "could not ask" means Home Assistant is
@@ -357,18 +377,63 @@ def _entry_state() -> str:
     that ran during an HA restart treated the 502 as "no entry", tried to start a
     config flow, failed, and left the integration evicted with a good pair on disk
     (measured 2026-10-17 21:48).
+
+    "missing" is the explicit ``entry_id`` naming no enabled entry. That is a
+    configuration error, not a fresh install: bootstrapping would create a second
+    entry and hide the mistake, so delivery waits and reports it instead.
+    """
+    return _entry_report()[0]
+
+
+def _select_entry(entries: list[dict]) -> dict | None:
+    """The entry this pair belongs to, by the VIN suffix in its title.
+
+    A config entry is titled ``XPENG <last six of the VIN>`` (the same suffix the
+    credentials entity is built from), so two cars in one Home Assistant resolve to
+    their own entries. A single-entry install keeps the old behaviour even when the
+    pair has no readable VIN, so an upgrade cannot start refusing deliveries.
+    """
+    vin = _vin_from_pair(PAIR_DIR).lower()
+    if vin:
+        suffix = vin[-6:]
+        for entry in entries:
+            if str(entry.get("title") or "").strip().lower().endswith(suffix):
+                return entry
+    return entries[0] if len(entries) == 1 else None
+
+
+def _entry_report() -> tuple[str, dict | None]:
+    """The delivery state, and the entry the pair should be imported into.
+
+    One Home Assistant call answers both questions - which entry receives the pair
+    and whether Home Assistant can be asked at all - so the import can name its
+    target explicitly instead of relying on "the first entry", which is wrong on a
+    multi-car install.
     """
     status, body = _core_json("/config/config_entries/entry", method="GET")
     if status != 200 or not isinstance(body, list):
-        return "unknown"
-    for entry in body:
-        if (
-            isinstance(entry, dict)
-            and entry.get("domain") == "xpeng"
-            and not entry.get("disabled_by")
-        ):
-            return "present"
-    return "absent"
+        return "unknown", None
+    entries = [
+        entry
+        for entry in body
+        if isinstance(entry, dict)
+        and entry.get("domain") == "xpeng"
+        and not entry.get("disabled_by")
+    ]
+    if ENTRY_ID:
+        match = next(
+            (entry for entry in entries if str(entry.get("entry_id") or "") == ENTRY_ID),
+            None,
+        )
+        if match is None:
+            _log(
+                "entry_id %s matches no enabled XPENG entry; check the option"
+                % ENTRY_ID
+            )
+            return "missing", None
+        return "present", match
+    entry = _select_entry(entries)
+    return ("present", entry) if entry is not None else ("absent", None)
 
 
 def _vin_from_pair(pair_dir: str) -> str:
@@ -522,14 +587,16 @@ def _pair_is_fresh(max_age_s: int = 3600) -> bool:
 def _deliver_pair(pair_dir: str) -> dict:
     """Get a minted pair into Home Assistant. Never logs in.
 
-    Three outcomes matter, and they are told apart by ``_entry_state()``:
+    Four outcomes matter, and they are told apart by ``_entry_report()``:
 
-    * ``present`` - call ``xpeng.import_credentials``, which validates the pair
-      before swapping anything;
+    * ``present`` - import into the entry this pair belongs to (named explicitly,
+      so a multi-car install cannot pick the wrong one);
     * ``absent``  - a fresh install. ``import_credentials`` does not exist until
       an entry does (component setup only runs once one exists), so drive the
       config flow instead and treat the created entry as the delivery. This is
       what makes the first renewal finish with no human;
+    * ``missing`` - an explicit ``entry_id`` that names no enabled entry. That is
+      a configuration error to report, not a fresh install to bootstrap;
     * ``unknown`` - Home Assistant is restarting or unreachable. The pair is
       minted and safe on disk, so report it as retryable *delivery* rather than
       as a failed renewal: another login would mint yet another pair and evict
@@ -538,7 +605,7 @@ def _deliver_pair(pair_dir: str) -> dict:
     ``retry_import`` in the result says whether another attempt at *this* pair
     is worth making without logging in again.
     """
-    state = _entry_state()
+    state, entry = _entry_report()
 
     if state == "absent":
         bootstrapped, outcome = _bootstrap_entry(pair_dir)
@@ -549,6 +616,16 @@ def _deliver_pair(pair_dir: str) -> dict:
                 "retry_import": True,
             }
         return {"ok": True, "bootstrapped": outcome}
+
+    if state == "missing":
+        return {
+            "ok": False,
+            "error": (
+                "the configured entry_id (%s) matches no enabled XPENG entry; "
+                "fix the option or clear it" % (ENTRY_ID or "?")
+            ),
+            "retry_import": True,
+        }
 
     if state == "unknown":
         return {
@@ -566,12 +643,16 @@ def _deliver_pair(pair_dir: str) -> dict:
     # does not ask for the response with HTTP 400 "Service call requires responses
     # but caller did not ask for responses". The response is also the import
     # result - entry id, VIN, device id, client id.
+    payload = {
+        "tokens_path": os.path.join(pair_dir, "xpeng_tokens.json"),
+        "tenant_path": os.path.join(pair_dir, "xpeng_tenant.json"),
+    }
+    if entry is not None:
+        target = str(entry.get("entry_id") or "").strip()
+        if target:
+            payload["entry_id"] = target
     status, body = _call_service(
-        "/services/xpeng/import_credentials?return_response",
-        {
-            "tokens_path": os.path.join(pair_dir, "xpeng_tokens.json"),
-            "tenant_path": os.path.join(pair_dir, "xpeng_tenant.json"),
-        },
+        "/services/xpeng/import_credentials?return_response", payload
     )
     if status != 200:
         # A 4xx is the pair being rejected (bad/expired tokens, a mismatch): a new
@@ -803,7 +884,8 @@ def _record_result(result: dict, kind: str = "renew") -> None:
     if result["ok"]:
         STATE["consecutive_failures"] = 0
         _log("%s ok in %sms" % (kind, result.get("ms")))
-        _notify("XPENG credentials renewed", "A fresh token pair was imported.")
+        if NOTIFY_ON_SUCCESS:
+            _notify("XPENG credentials renewed", "A fresh token pair was imported.")
         return
     STATE["failures"] += 1
     STATE["consecutive_failures"] += 1

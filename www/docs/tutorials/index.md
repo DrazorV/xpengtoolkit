@@ -9,3 +9,7 @@ rather than listing every possibility like the
 - **[Set up the XPENG Vehicle card](vehicle-card)** — enable the optional bundled
   dashboard card, add it to a dashboard, choose which car it shows, configure it
   for several cars or renamed entities, and keep it updated.
+- **[Capture XPENG notifications](notification-capture)** — record every
+  notification (including two X-Combo messages with the same text) as a Logbook
+  line that keeps its text, read the unparsed `raw` record, and work through the
+  polling and field-rename pitfalls.

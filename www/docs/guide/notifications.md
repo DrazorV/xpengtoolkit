@@ -44,7 +44,8 @@ the notifications a user cares about. Since 0.6.15 it is tracked where a session
 event belongs:
 
 - **`xpeng_account_takeover`** — a bus event carrying the notice
-  (`service_type`, `code`, `message`, `msg_id`, `timestamp`);
+  (`service_type`, `code`, `message`, `msg_id`, `timestamp`, and `raw` — the
+  push envelope it arrived in);
 - `sensor.xpeng_<vehicle>_polling_status` attributes **`last_takeover_at`** and
   **`account_takeovers`** (count since startup);
 - the INFO line the MQTT client logs (`Account signed in elsewhere - expecting a
@@ -78,12 +79,53 @@ The state is the message text of the most recent notification (or `code <n>`, or
 | Attribute | Contents |
 | --- | --- |
 | `count` | How many new notifications have arrived since startup. It stays at `0` until something new arrives. |
-| `recent` | The last five Message Centre records, each with `title`, `message`, `category`, `msg_type`, `read`, `msg_id` and `timestamp`. |
-| `message`, `timestamp`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
+| `recent` | The last five records, each with `title`, `message`, `category`, `msg_type`, `read`, `msg_id`, `timestamp` and that record's `raw`. |
+| `raw` | The unparsed record for the latest notification — a Message Centre item, or the MQTT push envelope for a `msg_type=3` push. See [The raw record](#the-raw-record). |
+| `timestamp` | When XPENG says the message was created (the Message Centre `createTime`). For a `msg_type=3` push there is no claimed time, so this is when it arrived. |
+| `collected_at` | When the poll recorded the message. |
+| `delay_s` | `collected_at` minus `timestamp`: the poll interval plus however long the API took, or `0` for a push. Stamped once when the record is collected, so it does not grow as the entity is read. |
+| `category`, `title`, `msg_type` | The latest record's classification and display fields, at the top level so a state trigger can filter on them. `None` for a `msg_type=3` push, which is not a Message Centre item. |
+| `message`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
 
 The `xpeng_notification` event carries the same flattened record for the
 notification that fired it. Human-readable text is extracted from the app's HTML
 bodies, so `message` is plain text rather than markup.
+
+### Capture with the event, not the sensor state
+
+An automation that must **record every message** has to trigger on the
+`xpeng_notification` event. The sensor's state is the message text, so a second
+notification with the same text produces no state change — two identical X-Combo
+messages collapse into one. The event fires once per new Message Centre item and
+carries the same fields in `trigger.event.data`. A worked example (event trigger
+plus a Logbook line that keeps the text) is in
+[Capture XPENG notifications](../tutorials/notification-capture).
+
+### The raw record
+
+Both the sensor's `raw` attribute and the event's `raw` field carry the record
+exactly as it arrived, before any parsing. A polled notification is a Message
+Centre item:
+
+```json
+{
+  "id": "1558173270679261184",
+  "messageId": "1558173270679261184",
+  "read": false,
+  "createTime": "2026-10-09 09:44:17.0000",
+  "messageContent": "{\"msgContent\":{\"title\":\"XCOMBO-...\",\"description\":\"<p>...</p>\"},...}"
+}
+```
+
+A rare `msg_type=3` push carries the MQTT envelope instead — `msg_type`,
+`service_type`, `msg_id` and the nested `msg_content` — because that envelope is
+where the extra fields live; the flattened top level is what parsing produced.
+
+`messageContent` is deliberately left as the original JSON *string*, not the
+parsed object. That is the point: if XPENG renames or moves a field the parser
+reads, the captured `raw` still holds it, so the parser can be fixed from the
+event or the entity's attributes instead of needing a new live capture. Nothing
+in the integration depends on `raw`'s contents — it exists for that failure mode.
 
 ## Triggering automations
 
@@ -121,8 +163,10 @@ automation:
           message: "{{ trigger.to_state.state }}"
 ```
 
-The event is the richer of the two — its data carries `category` and `msg_type`
-directly — while the sensor is simply easier to see and test.
+Both forms carry the same fields now: the event in `trigger.event.data`, the
+sensor as top-level attributes. The event is still the one to use for capture,
+because it fires once per item even when the text repeats; the sensor's state is
+the text, so identical messages produce no state change.
 
 ## Only new notifications fire
 

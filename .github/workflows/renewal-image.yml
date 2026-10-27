@@ -1,0 +1,56 @@
+name: Renewal image
+
+# Publishes the credential-renewal companion app to GHCR, for the standalone
+# Docker route (Container/Core installs, Portainer, compose). The app store
+# builds the same Dockerfile on an HAOS host; this is the prebuilt copy.
+#
+# The tag comes from xpeng_renew/config.yaml, the version the Supervisor puts in
+# the app store, so the image and the app always name the same build. The solver
+# image is built the same way from xpengtoolkit/slider-solver.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "xpeng_renew/**"
+      - ".github/workflows/renewal-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the app version
+        id: app
+        run: |
+          version=$(python3 -c "import re; print(re.search(r'^version:\s*\"([^\"]+)\"', open('xpeng_renew/config.yaml', encoding='utf-8').read(), re.M).group(1))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: xpeng_renew
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xpeng-renew:${{ steps.app.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/xpeng-renew:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.app.outputs.version }}
+            org.opencontainers.image.title=XPENG credential renewal
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

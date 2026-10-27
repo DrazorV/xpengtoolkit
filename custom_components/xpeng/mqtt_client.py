@@ -1536,6 +1536,13 @@ class XPengMQTTClient:
         for key, val in content.items():
             if key not in ("code", "msg"):
                 notification[key] = val
+        # The push envelope as it arrived, before this flattening drops
+        # `msg_type`/`msg_content`. It is the same guarantee the polled Message
+        # Centre items get from parse_notification_item(): a renamed field is
+        # still in the record, not silently absent. Set last so a msg_content
+        # key named "raw" cannot displace it; the coordinator keeps this key
+        # rather than replacing it.
+        notification["raw"] = dict(data)
         _LOGGER.info("Push notification parsed: %s", notification)
         if self._notification_callback:
             self._notification_callback(notification)

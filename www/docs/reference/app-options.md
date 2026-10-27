@@ -45,7 +45,9 @@ imports it. If there is no config entry yet it creates one first — see
 | `solver_url` | URL | `http://571f4c18-xpeng-slider-solver:8080` | Where the solver app listens; see the table below |
 | `solver_token` | password | empty | The solver's `solver_token`, if you set one |
 | `renew_token` | password | empty | Bearer token that `POST /renew` requires |
+| `notify_on_success` | optional boolean | `true` | Send a persistent notification after each successful renewal; failures still notify after two consecutive attempts |
 | `pair_dir` | string | `/config/xpeng-secrets` | Where the minted pair is written for Home Assistant to read |
+| `entry_id` | optional string | empty | Target one config entry by id; empty selects the entry whose title ends with the pair's VIN suffix |
 | `command_mode` | optional list | `safe_plus` | What the integration may do to the car, applied when this app creates the config entry: `read_only`, `safe`, `safe_plus`, `full` (`charging` is the old name for `safe_plus`) |
 
 The renewal app declares no minimum or maximum for `renew_interval` or
@@ -107,7 +109,9 @@ image the app store would build can be run with plain `docker run -e` as it is.
 | `solver_url` | `SOLVER_URL` | `http://571f4c18-xpeng-slider-solver:8080` |
 | `solver_token` | `SOLVER_TOKEN` | empty |
 | `renew_token` | `RENEW_TOKEN` | empty |
+| `notify_on_success` | `NOTIFY_ON_SUCCESS` | `true` |
 | `pair_dir` | `PAIR_DIR` | `/config/xpeng-secrets` |
+| `entry_id` | `ENTRY_ID` | empty |
 | `command_mode` | `COMMAND_MODE` | `safe_plus` |
 | (Core API address) | `CORE_API` | `http://supervisor/core/api` |
 | (Core API bearer) | `SUPERVISOR_TOKEN` | empty |
@@ -301,6 +305,8 @@ sensitive even when `renew_token` is set — `renew_token` protects `/renew`, no
 `solves`, `failures`, `queued`, `auth` and `defaultCaptchaId`.
 
 The renewal app raises a persistent notification after **two consecutive
-failures**. Home Assistant 2026.10 no longer exposes persistent notifications as
+failures**, and one after each successful renewal unless `notify_on_success` is
+false - the success card is the repetitive one when the app renews on its own timer.
+Home Assistant 2026.10 no longer exposes persistent notifications as
 `persistent_notification.*` entities, so look in the notifications panel rather
 than in a template.

@@ -1,5 +1,5 @@
 name: XPENG credential renewal
-version: "0.1.19"
+version: "0.1.21"
 slug: xpeng_renew
 description: >-
   Renews XPENG credentials unattended. Solves the login slider through the solver
@@ -51,7 +51,16 @@ options:
   solver_url: "http://571f4c18-xpeng-slider-solver:8080"
   solver_token: ""
   renew_token: ""
+  # Send a persistent notification after every successful renewal. Failures still
+  # notify after two consecutive attempts either way. Turn this off on an install
+  # that renews on its own timer and does not want a card every interval.
+  notify_on_success: true
   pair_dir: "/config/xpeng-secrets"
+  # Target one config entry by its id instead of the entry whose title carries
+  # this pair's VIN suffix. Only needed when more than one XPENG entry exists,
+  # e.g. two cars on two accounts with one instance each (each also needs its own
+  # pair_dir). Leave empty to match the pair's VIN.
+  entry_id: ""
   # What the integration is allowed to do to the car, set when this app creates
   # the config entry on a fresh install (Home Assistant's own setup form asks
   # the same question when a person does it). One of: read_only, safe, safe_plus,
@@ -71,5 +80,7 @@ schema:
   solver_url: url
   solver_token: password
   renew_token: password
+  notify_on_success: bool?
   pair_dir: str
+  entry_id: str?
   command_mode: list(read_only|safe|safe_plus|charging|full)
