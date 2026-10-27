@@ -28,15 +28,18 @@ TYRE_PRESSURE_UNITS: Final = ("kPa", "psi", "bar")
 
 DEFAULT_TYRE_PRESSURE_UNIT: Final = TYRE_PRESSURE_UNIT_SYSTEM
 
-#: The options-form dropdown. Labels are literal, like this form's other
-#: selectors; the units are language-neutral and only the first phrase is
-#: English, matching the form's existing hardcoded labels.
-TYRE_PRESSURE_UNIT_OPTIONS: Final = (
+#: The options-form dropdown. A **list**, not a tuple: Home Assistant's
+#: SelectSelector validates its config with ``probatio.Any([str], [select_option])``,
+#: which is a list of strings or a list of option dicts - a tuple is rejected when
+#: the form is built, and the HTTP layer turns that into "400: Bad Request" for the
+#: whole Configure dialog. Labels are literal, like this form's other selectors;
+#: the units are language-neutral and only the first phrase is English.
+TYRE_PRESSURE_UNIT_OPTIONS: Final = [
     {"value": TYRE_PRESSURE_UNIT_SYSTEM, "label": "Home Assistant unit system"},
     {"value": "kPa", "label": "kPa"},
     {"value": "psi", "label": "psi"},
     {"value": "bar", "label": "bar"},
-)
+]
 
 
 def suggested_tyre_pressure_unit(value: Any) -> str | None:

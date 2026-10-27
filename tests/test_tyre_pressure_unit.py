@@ -65,6 +65,15 @@ class TestMapping(unittest.TestCase):
         # HA's - the integration never converts a value itself.
         self.assertEqual(set(display.TYRE_PRESSURE_UNITS), {"kPa", "psi", "bar"})
 
+    def test_the_form_choices_are_a_list(self):
+        """HA's SelectSelector CONFIG_SCHEMA is probatio.Any([str], [select_option]).
+
+        That is a *list* of strings or a *list* of option dicts. A tuple passes
+        mypy and reads the same, but is rejected when the form is built - it took
+        the whole Configure dialog down with "400: Bad Request" in 0.6.32.
+        """
+        self.assertIsInstance(display.TYRE_PRESSURE_UNIT_OPTIONS, list)
+
     def test_the_form_choices_match_the_mapping(self):
         values = [option["value"] for option in display.TYRE_PRESSURE_UNIT_OPTIONS]
         self.assertEqual(values, ["system", "kPa", "psi", "bar"])
