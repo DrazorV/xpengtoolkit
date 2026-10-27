@@ -37,15 +37,17 @@ services:
       SOLVER_URL: "http://xpeng-slider-solver:8080"
       SOLVER_TOKEN: "${SOLVER_TOKEN:?set SOLVER_TOKEN in .env}"
       RENEW_TOKEN: "${RENEW_TOKEN:?set RENEW_TOKEN in .env}"
-      PAIR_DIR: "/config/xpeng-secrets"
+      PAIR_DIR: "${PAIR_DIR:-/config/xpeng-secrets}"
       CORE_API: "${CORE_API:-http://homeassistant:8123/api}"
       SUPERVISOR_TOKEN: "${HA_TOKEN:?set HA_TOKEN in .env}"
       COMMAND_MODE: "${COMMAND_MODE:-safe_plus}"
       NOTIFY_ON_SUCCESS: "${NOTIFY_ON_SUCCESS:-true}"
     volumes:
-      # Live credentials: also mount this host directory into the Home Assistant
-      # container at /config/xpeng-secrets, or the import cannot read it.
-      - "${XPENG_SECRETS_DIR:-./xpeng-secrets}:/config/xpeng-secrets"
+      # Live credentials: the same host directory must also be visible inside the
+      # Home Assistant container at this exact path, or the import cannot read it.
+      # PAIR_DIR is that path - set it (and the mount target follows) when Core
+      # sees the pair somewhere else, e.g. a /share mount.
+      - "${XPENG_SECRETS_DIR:-./xpeng-secrets}:${PAIR_DIR:-/config/xpeng-secrets}"
       - "${XPENG_CERTS_DIR:-./xpeng-certs}:/config/xpeng-certs:ro"
       - xpeng-renew-data:/data
 

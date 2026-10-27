@@ -674,8 +674,10 @@ the config flow. Three mounts have to be right:
 * **`pair_dir` must be the same absolute path inside the Home Assistant container.**
   The pair is not uploaded: `xpeng.import_credentials` is called with
   `tokens_path`/`tenant_path` and Core reads those files itself, so mount the host
-  directory into *both* containers at the same path. `chmod 700` it - live
-  credentials.
+  directory into *both* containers at the same path. The compose file's `PAIR_DIR`
+  can be any path both see (for example a `/share/<name>` mount), but the default
+  local `/config/xpeng-secrets` keeps live credentials off a network share.
+  `chmod 700` it - live credentials.
 * **Certificates** at `/config/xpeng-certs` (or
   `/config/custom_components/xpeng/certs`), read-only. The bundled onboarding code
   looks in both.

@@ -164,6 +164,10 @@ Three mounts have to be right, and the first one catches people:
   those files itself. Mount the host directory into *both* containers at the same
   path — the compose file uses `/config/xpeng-secrets`, which is what `pair_dir`
   defaults to. `chmod 700` the host directory: live credentials.
+  If Core sees the pair somewhere else, set **`PAIR_DIR`** in `.env` and the
+  compose mount target follows it — for example `/share/xpeng-secrets` when a
+  NAS share is mounted under `/share`. That works, but it puts the live token
+  pair on a network share; the default local `/config` path is the safer choice.
 * **Certificates** at `/config/xpeng-certs` (or
   `/config/custom_components/xpeng/certs`), read-only. The bundled onboarding code
   searches both.
