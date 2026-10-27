@@ -72,8 +72,10 @@ class TestNextDelay(unittest.TestCase):
 
 
 class TestDelivery(unittest.TestCase):
-    def _deliver(self, state, **patches):
-        with mock.patch.object(server, "_entry_state", return_value=state):
+    def _deliver(self, state, entry=None, **patches):
+        with mock.patch.object(
+            server, "_entry_report", return_value=(state, entry)
+        ):
             for name, value in patches.items():
                 setattr(server, name, value)
             return server._deliver_pair("/tmp/pair")
@@ -195,6 +197,88 @@ class TestSchedulingWiring(unittest.TestCase):
         scheduler = source[source.index("def _scheduler"):source.index("def _record_result")]
         self.assertIn("_pair_on_disk() and _pair_is_fresh() and _credentials_invalid()", scheduler)
         self.assertIn('STATE["pending_import"] = True', scheduler)
+
+
+class TestEntrySelection(unittest.TestCase):
+    """Which XPENG entry receives a pair, when an install has more than one."""
+
+    ENTRIES = [
+        {"entry_id": "e-g9", "domain": "xpeng", "title": "XPENG 123456"},
+        {"entry_id": "e-x9", "domain": "xpeng", "title": "XPENG 654321"},
+    ]
+
+    def _report(self, entries, entry_id="", vin=""):
+        with (
+            mock.patch.object(server, "ENTRY_ID", entry_id),
+            mock.patch.object(server, "_vin_from_pair", return_value=vin),
+            mock.patch.object(server, "_core_json", return_value=(200, entries)),
+            mock.patch.object(server, "_log"),
+        ):
+            return server._entry_report()
+
+    def test_the_vin_suffix_selects_the_entry(self):
+        self.assertEqual(
+            self._report(self.ENTRIES, vin="L1NNSGHAXSB654321"),
+            ("present", self.ENTRIES[1]),
+        )
+
+    def test_an_explicit_entry_id_wins(self):
+        self.assertEqual(
+            self._report(self.ENTRIES, entry_id="e-x9", vin="L1NNSGHAXSB123456"),
+            ("present", self.ENTRIES[1]),
+        )
+
+    def test_an_unknown_entry_id_is_missing_not_a_fresh_install(self):
+        self.assertEqual(
+            self._report(self.ENTRIES, entry_id="e-gone"), ("missing", None)
+        )
+
+    def test_two_entries_without_a_vin_match_is_absent(self):
+        self.assertEqual(
+            self._report(self.ENTRIES, vin="L1NNSGHAXSB000000"), ("absent", None)
+        )
+
+    def test_a_sole_entry_keeps_working_without_a_vin(self):
+        one = [{"entry_id": "e1", "domain": "xpeng", "title": "XPENG"}]
+        self.assertEqual(self._report(one, vin=""), ("present", one[0]))
+
+    def test_disabled_entries_are_ignored(self):
+        entries = [
+            {
+                "entry_id": "e1",
+                "domain": "xpeng",
+                "title": "XPENG 123456",
+                "disabled_by": "user",
+            }
+        ]
+        self.assertEqual(
+            self._report(entries, vin="L1NNSGHAXSB123456"), ("absent", None)
+        )
+
+    def test_delivery_names_the_matched_entry(self):
+        service = mock.Mock(return_value=(200, '{"entry_id": "e-x9"}'))
+        with (
+            mock.patch.object(
+                server, "_entry_report", return_value=("present", self.ENTRIES[1])
+            ),
+            mock.patch.object(server, "_call_service", service),
+        ):
+            result = server._deliver_pair("/tmp/pair")
+        self.assertTrue(result["ok"])
+        self.assertEqual(service.call_args.args[1]["entry_id"], "e-x9")
+
+    def test_a_missing_entry_does_not_import(self):
+        service = mock.Mock()
+        with (
+            mock.patch.object(server, "_entry_report", return_value=("missing", None)),
+            mock.patch.object(server, "ENTRY_ID", "e-gone"),
+            mock.patch.object(server, "_call_service", service),
+        ):
+            result = server._deliver_pair("/tmp/pair")
+        self.assertFalse(result["ok"])
+        self.assertTrue(result["retry_import"])
+        service.assert_not_called()
+        self.assertIn("e-gone", result["error"])
 
 
 if __name__ == "__main__":

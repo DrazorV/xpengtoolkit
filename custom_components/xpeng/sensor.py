@@ -953,6 +953,16 @@ class XPengNotificationSensor(XPengEntity, SensorEntity):
         }
         note = self._last
         if note:
+            # `delay_s` and `collected_at` are stamped once by record_notification()
+            # when the record is collected, so they are the real latency and do not
+            # drift as the entity is read. The fallback is for records recorded
+            # before that stamping existed (a live session across an upgrade).
+            if "delay_s" in note:
+                delay = note.get("delay_s")
+            else:
+                delay = poll_status.notification_delay_seconds(
+                    note.get("timestamp"), time.time()
+                )
             # The delay is the point of this sensor for the messages it carries:
             # a poll cannot beat its own interval, and knowing the real number is
             # what tells you whether tuning it would help. `collected_at` is when
@@ -963,12 +973,21 @@ class XPengNotificationSensor(XPengEntity, SensorEntity):
                     "msg_id": note.get("msg_id"),
                     "code": note.get("code"),
                     "message": note.get("message"),
+                    # Category/title/msg_type at the top level: a state trigger or
+                    # a UI condition has only `trigger.to_state.attributes`, and
+                    # filtering on the category is the common case. The event
+                    # payload carries the same three, so both forms agree.
+                    "category": note.get("category"),
+                    "title": note.get("title"),
+                    "msg_type": note.get("msg_type"),
                     "timestamp": note.get("timestamp"),
                     "source": note.get("source"),
-                    "delay_s": poll_status.notification_delay_seconds(
-                        note.get("timestamp"), time.time()
-                    ),
-                    "collected_at": datetime.now(timezone.utc).isoformat(),
+                    # The record before parsing: what makes a future XPENG field
+                    # rename fixable from this entity's attributes alone.
+                    "raw": note.get("raw"),
+                    "delay_s": delay,
+                    "collected_at": note.get("collected_at")
+                    or datetime.now(timezone.utc).isoformat(),
                 }
             )
         return attrs

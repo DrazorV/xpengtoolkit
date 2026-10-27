@@ -44,6 +44,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/tutorials/" },
           { text: "Vehicle card", link: "/tutorials/vehicle-card" },
+          { text: "Capture notifications", link: "/tutorials/notification-capture" },
         ],
       },
       {

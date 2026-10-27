@@ -12,6 +12,9 @@ Unofficial, reverse-engineered, and not affiliated with XPENG.
 the certificates, the two renewal apps, every entity and service, dashboard and
 automation examples, and what to check when it stops working.
 
+If this project is useful to you, you can
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/xpengtk)
+
 It runs headless - no phone and no official app - and with the two helper apps in
 [Unattended renewal](#unattended-renewal) it re-mints its own credentials before the
 session expires, so nothing has to be done by hand.
@@ -334,11 +337,19 @@ integration polls that list. A new one appears within one poll interval as:
   `delay_s` / `collected_at` in the attributes
 - **`xpeng_notification`** - a bus event carrying the same flattened fields
 
-**How late was it?** `delay_s` is `timestamp` (when XPENG recorded the message)
-minus `collected_at` (when the poll saw it), so the answer is on the sensor rather
-than being two timestamps to subtract by hand. It cannot be better than the poll
-interval - the interval, plus however long the API took - so when `delay_s` sits
-near the interval, the interval is the thing to change:
+Both also carry **`raw`**: the unparsed record as it arrived - the Message Centre
+item (with `messageContent` still its original JSON string) for a polled
+notification, or the MQTT push envelope for a rare `msg_type=3` push. It is not
+needed for normal use - it is what lets a future XPENG field rename be fixed from
+a captured event or a look at the sensor's attributes.
+
+**How late was it?** `delay_s` is `collected_at` (when the poll recorded the
+message) minus `timestamp` (when XPENG says it was created), so the answer is on
+the sensor rather than being two timestamps to subtract by hand. It is stamped
+once, when the record is collected, so it does not climb as the entity is read.
+It cannot be better than the poll interval - the interval, plus however long the
+API took - so when `delay_s` sits near the interval, the interval is the thing to
+change:
 
 **Settings -> Devices & Services -> XPENG -> Configure -> Message Centre poll
 interval**, default **300 s**, floor 60 s. Every poll is **six requests**, one per
@@ -635,10 +646,12 @@ Then configure the renewal app:
 |---|---|
 | `email` / `password` | the dedicated account - never the one signed into the phone app |
 | `renew_token` | any secret. **Set it** - the worker holds your password, and this is what the automation presents |
+| `notify_on_success` | send a persistent notification after each successful renewal. Default `true`; failures still notify after two consecutive attempts |
 | `solver_url` | the default if the solver came from the store; otherwise see the [solver_url table](docs/UNATTENDED_RENEWAL.md#if-solver_url-does-not-resolve) |
 | `solver_token` | the solver's token, if you set one |
 | `device_id` | leave blank and the first renewal pins it, or set it yourself. Do not change it afterwards - [it is the stale-client trap](#most-entities-are-unknown) |
 | `pair_dir` | `/config/xpeng-secrets` by default. `chmod 700` it |
+| `entry_id` | target one config entry by id. Leave it blank and the entry whose title ends with the pair's VIN suffix is used - that is what makes two cars on two accounts work without ids to copy |
 | `command_mode` | what the integration may do to the car, applied when the app creates the entry on a fresh install: `read_only`, `safe`, `safe_plus` (**default**), or `full` (`charging` is the old name for `safe_plus`). See [Command permissions](#command-permissions---what-the-integration-may-do-to-the-car) |
 
 The pair directory is live credentials on disk: `chmod 700`, and keep it out of any
@@ -648,49 +661,21 @@ share.
 
 Home Assistant **apps** (formerly add-ons) exist only on HAOS and Supervised - the
 Add-on Store does not exist on Container or Core. Both companions still work there,
-because an app is an ordinary container with an options file. Build the two images
-once (no prebuilt images are published; the Supervisor normally builds them on an
-HAOS box):
+because an app is an ordinary container with an options file. Both images are
+published to GHCR for `amd64` and `arm64`, and the repository root carries a ready
+`docker-compose.yml`:
 
 ```bash
-git clone https://github.com/xpengtoolkit/slider-solver
 git clone https://github.com/xpengtoolkit/xpengtoolkit
-docker build -t xpeng-slider-solver ./slider-solver/slider_solver
-docker build -t xpeng-renew ./xpengtoolkit/xpeng_renew
+cd xpengtoolkit
+cp .env.example .env      # account, tokens, mount paths
+docker compose pull
+docker compose up -d
 ```
 
-```yaml
-services:
-  xpeng-slider-solver:
-    image: xpeng-slider-solver
-    restart: unless-stopped
-    ports: ["8080:8080"]
-    environment:
-      SOLVER_TOKEN: "change-me"                  # same value in the renewal app
-
-  xpeng-renew:
-    image: xpeng-renew
-    restart: unless-stopped
-    depends_on: [xpeng-slider-solver]
-    ports: ["8090:8090"]                         # POST /renew, GET /healthz
-    environment:
-      EMAIL: "dedicated-account@example.com"     # never the phone-app account
-      PASSWORD: "that account's password"
-      SOLVER_URL: "http://xpeng-slider-solver:8080"
-      SOLVER_TOKEN: "change-me"
-      RENEW_TOKEN: "a-second-secret"             # bearer for POST /renew
-      PAIR_DIR: "/config/xpeng-secrets"
-      CORE_API: "http://homeassistant:8123/api"
-      SUPERVISOR_TOKEN: "<Home Assistant long-lived token>"
-      COMMAND_MODE: "safe_plus"
-    volumes:
-      - ./ha-config/xpeng-secrets:/config/xpeng-secrets
-      - ./ha-config/xpeng-certs:/config/xpeng-certs:ro
-      - xpeng-renew-data:/data
-
-volumes:
-  xpeng-renew-data:
-```
+Building from source is still supported: clone both repositories and
+`docker build -t xpeng-slider-solver ./slider-solver/slider_solver` /
+`docker build -t xpeng-renew ./xpengtoolkit/xpeng_renew`.
 
 The app's options become upper-case environment variables. Two of them replace
 Supervisor plumbing: `CORE_API` (default `http://supervisor/core/api`) points at the
@@ -701,8 +686,10 @@ the config flow. Three mounts have to be right:
 * **`pair_dir` must be the same absolute path inside the Home Assistant container.**
   The pair is not uploaded: `xpeng.import_credentials` is called with
   `tokens_path`/`tenant_path` and Core reads those files itself, so mount the host
-  directory into *both* containers at the same path. `chmod 700` it - live
-  credentials.
+  directory into *both* containers at the same path. The compose file's `PAIR_DIR`
+  can be any path both see (for example a `/share/<name>` mount), but the default
+  local `/config/xpeng-secrets` keeps live credentials off a network share.
+  `chmod 700` it - live credentials.
 * **Certificates** at `/config/xpeng-certs` (or
   `/config/custom_components/xpeng/certs`), read-only. The bundled onboarding code
   looks in both.

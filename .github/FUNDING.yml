@@ -1,0 +1,4 @@
+# Adds a Sponsor button to the repository that opens the project's Buy Me a Coffee page.
+# The native key renders Buy Me a Coffee's own button; a `custom:` URL would only
+# produce a generic "Sponsor" link.
+buy_me_a_coffee: xpengtk

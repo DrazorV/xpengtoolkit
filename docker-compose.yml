@@ -1,0 +1,56 @@
+# Standalone (Home Assistant Container/Core, Portainer) copies of the two
+# companion apps. Both images are published to GitHub Container Registry from
+# their repositories on every change:
+#
+#   ghcr.io/xpengtoolkit/xpeng-renew           this repository
+#   ghcr.io/xpengtoolkit/xpeng-slider-solver   xpengtoolkit/slider-solver
+#
+#   cp .env.example .env    # fill it in
+#   docker compose pull
+#   docker compose up -d
+#
+# The mounts mirror the app-store install: the pair must live at the same
+# absolute path inside the Home Assistant container, and the certificates must
+# be where the bundled onboarding code looks for them.
+name: xpeng-companions
+
+services:
+  xpeng-slider-solver:
+    image: ghcr.io/xpengtoolkit/xpeng-slider-solver:latest
+    restart: unless-stopped
+    environment:
+      SOLVER_TOKEN: "${SOLVER_TOKEN:?set SOLVER_TOKEN in .env}"
+      DEBUG_DIR: "/data/debug"
+    volumes:
+      - xpeng-solver-debug:/data/debug
+
+  xpeng-renew:
+    image: ghcr.io/xpengtoolkit/xpeng-renew:latest
+    restart: unless-stopped
+    depends_on:
+      - xpeng-slider-solver
+    ports:
+      - "${RENEW_PORT:-8090}:8090"   # POST /renew, GET /healthz
+    environment:
+      EMAIL: "${XPENG_EMAIL:?set XPENG_EMAIL in .env}"
+      PASSWORD: "${XPENG_PASSWORD:?set XPENG_PASSWORD in .env}"
+      SOLVER_URL: "http://xpeng-slider-solver:8080"
+      SOLVER_TOKEN: "${SOLVER_TOKEN:?set SOLVER_TOKEN in .env}"
+      RENEW_TOKEN: "${RENEW_TOKEN:?set RENEW_TOKEN in .env}"
+      PAIR_DIR: "${PAIR_DIR:-/config/xpeng-secrets}"
+      CORE_API: "${CORE_API:-http://homeassistant:8123/api}"
+      SUPERVISOR_TOKEN: "${HA_TOKEN:?set HA_TOKEN in .env}"
+      COMMAND_MODE: "${COMMAND_MODE:-safe_plus}"
+      NOTIFY_ON_SUCCESS: "${NOTIFY_ON_SUCCESS:-true}"
+    volumes:
+      # Live credentials: the same host directory must also be visible inside the
+      # Home Assistant container at this exact path, or the import cannot read it.
+      # PAIR_DIR is that path - set it (and the mount target follows) when Core
+      # sees the pair somewhere else, e.g. a /share mount.
+      - "${XPENG_SECRETS_DIR:-./xpeng-secrets}:${PAIR_DIR:-/config/xpeng-secrets}"
+      - "${XPENG_CERTS_DIR:-./xpeng-certs}:/config/xpeng-certs:ro"
+      - xpeng-renew-data:/data
+
+volumes:
+  xpeng-renew-data:
+  xpeng-solver-debug:

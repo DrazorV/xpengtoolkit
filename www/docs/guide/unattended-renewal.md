@@ -109,8 +109,30 @@ are still available there, because an app is an ordinary container with an optio
 file: the same two images run as plain Docker containers.
 
 The solver's own README covers its side, including a non-Docker Node route. The
-renewal side is below. Build both images once — no prebuilt images are published,
-because the Supervisor normally builds the apps on an HAOS box:
+renewal side is below.
+
+Both companion images are **published to GitHub Container Registry** on every
+change, for `amd64` and `arm64`, so nothing has to be built by hand:
+
+| Image | Built from |
+| --- | --- |
+| `ghcr.io/xpengtoolkit/xpeng-renew` | this repository |
+| `ghcr.io/xpengtoolkit/xpeng-slider-solver` | `xpengtoolkit/slider-solver` |
+
+The repository root carries a
+[`docker-compose.yml`](https://github.com/xpengtoolkit/xpengtoolkit/blob/main/docker-compose.yml)
+and a `.env.example` that names every setting:
+
+```bash
+git clone https://github.com/xpengtoolkit/xpengtoolkit
+cd xpengtoolkit
+cp .env.example .env      # account, tokens, mount paths
+docker compose pull
+docker compose up -d
+```
+
+Image tags are the app versions (`:0.1.21`, ...); `:latest` tracks the newest.
+Building from source still works if you would rather not pull a registry image:
 
 ```bash
 git clone https://github.com/xpengtoolkit/slider-solver
@@ -119,41 +141,9 @@ docker build -t xpeng-slider-solver ./slider-solver/slider_solver
 docker build -t xpeng-renew ./xpengtoolkit/xpeng_renew
 ```
 
-A compose file that mirrors the app route:
-
-```yaml
-services:
-  xpeng-slider-solver:
-    image: xpeng-slider-solver
-    restart: unless-stopped
-    ports: ["8080:8080"]
-    environment:
-      SOLVER_TOKEN: "change-me"                  # long random string
-      DEBUG_DIR: "/debug"
-
-  xpeng-renew:
-    image: xpeng-renew
-    restart: unless-stopped
-    depends_on: [xpeng-slider-solver]
-    ports: ["8090:8090"]                         # POST /renew, GET /healthz
-    environment:
-      EMAIL: "dedicated-account@example.com"     # never the phone-app account
-      PASSWORD: "that account's password"
-      SOLVER_URL: "http://xpeng-slider-solver:8080"
-      SOLVER_TOKEN: "change-me"                  # same value as above
-      RENEW_TOKEN: "a-second-secret"             # bearer for POST /renew
-      PAIR_DIR: "/config/xpeng-secrets"
-      CORE_API: "http://homeassistant:8123/api"
-      SUPERVISOR_TOKEN: "<Home Assistant long-lived token>"
-      COMMAND_MODE: "safe_plus"
-    volumes:
-      - ./ha-config/xpeng-secrets:/config/xpeng-secrets
-      - ./ha-config/xpeng-certs:/config/xpeng-certs:ro
-      - xpeng-renew-data:/data
-
-volumes:
-  xpeng-renew-data:
-```
+The compose file keeps the solver on the internal Docker network (only the
+renewal API's port `8090` is published) and uses the same image defaults as the
+store install.
 
 The two pieces the Supervisor normally supplies become ordinary settings:
 
@@ -172,8 +162,12 @@ Three mounts have to be right, and the first one catches people:
   container.** The pair is not uploaded; the app calls
   `xpeng.import_credentials` with `tokens_path` / `tenant_path`, and Core reads
   those files itself. Mount the host directory into *both* containers at the same
-  path — the example uses `/config/xpeng-secrets`, which is what `pair_dir`
+  path — the compose file uses `/config/xpeng-secrets`, which is what `pair_dir`
   defaults to. `chmod 700` the host directory: live credentials.
+  If Core sees the pair somewhere else, set **`PAIR_DIR`** in `.env` and the
+  compose mount target follows it — for example `/share/xpeng-secrets` when a
+  NAS share is mounted under `/share`. That works, but it puts the live token
+  pair on a network share; the default local `/config` path is the safer choice.
 * **Certificates** at `/config/xpeng-certs` (or
   `/config/custom_components/xpeng/certs`), read-only. The bundled onboarding code
   searches both.
@@ -250,6 +244,30 @@ The app needs permission to call that service; it asks for `homeassistant_api` i
 its own config, which is what makes the import and its failure notifications
 possible. A `401 Unauthorized` from the import step rather than a 400 means that
 grant is missing.
+
+### Two cars, two accounts
+
+XPENG allows **one active session per account**, so two cars need one account each:
+share each car to its own dedicated account, never the phone-app account. Home
+Assistant then has one XPENG config entry per account, and the two sessions do not
+evict each other.
+
+Each account needs its own renewal app instance. Give each instance:
+
+* its own **`pair_dir`** — for example `/config/xpeng-secrets-g9` and
+  `/config/xpeng-secrets-x9`, each mounted into Home Assistant at the same absolute
+  path. Two instances sharing one directory overwrite each other's pair;
+* its own **port** if both run as plain containers (`8090` and `8091`), or its own
+  service name under the Supervisor;
+* optionally its own **`entry_id`**. Left empty, the app selects the entry whose
+  title ends with the pair's VIN suffix (`XPENG <last six>`), so the instances stay
+  independent with nothing to copy. Set `entry_id` only when that is ambiguous,
+  for example after renaming an entry.
+
+The solver can be shared: it solves the slider, not the account.
+
+The app names the selected entry explicitly in `xpeng.import_credentials`, so a
+pair minted for one car cannot land in the other car's entry.
 
 ## Home Assistant side (optional)
 

@@ -42,7 +42,9 @@ Configure the worker:
 | `solver_url` | where the solver app listens. Defaults to `http://571f4c18-xpeng-slider-solver:8080`, the solver's container hostname as installed from the store. |
 | `solver_token` | the solver's `solver_token`, if you set one. |
 | `renew_token` | what the automation presents to `POST /renew`. **Set this** — the worker holds your password. |
+| `notify_on_success` | send a persistent notification after every successful renewal (default `true`). Failures still notify after two consecutive attempts. |
 | `pair_dir` | where the fresh pair is written for Home Assistant to read; `/config/xpeng-secrets` by default. |
+| `entry_id` | target one config entry by its id instead of the entry whose title matches this pair's VIN. Only needed when more than one XPENG entry exists — two cars on two accounts. |
 | `command_mode` | what the integration may do to the car when this app creates the entry (`read_only`, `safe`, `safe_plus`, `full`; `charging` is the old name for `safe_plus`). Defaults to `safe_plus` - see the README's Command permissions section |
 
 Give the pair directory a second thought: it is live credentials on disk, readable
@@ -403,7 +405,10 @@ Read these in order:
    problem. Look for `MQTT connection refused: rc=Not authorized`, then count the
    distinct `clientId`s.
 
-The worker raises a persistent notification after **two consecutive failures**.
+The worker raises a persistent notification after **two consecutive failures**, and
+one after each successful renewal unless `notify_on_success` is false. The success
+card is the repetitive one on an install that renews on its own timer; failures keep
+notifying either way.
 Note that Home Assistant 2026.10 no longer exposes persistent notifications as
 `persistent_notification.*` entities, so you will not find them with a template or
 in the state list — look in the notifications panel in the UI.
