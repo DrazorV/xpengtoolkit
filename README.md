@@ -339,11 +339,13 @@ notification, or the MQTT push envelope for a rare `msg_type=3` push. It is not
 needed for normal use - it is what lets a future XPENG field rename be fixed from
 a captured event or a look at the sensor's attributes.
 
-**How late was it?** `delay_s` is `timestamp` (when XPENG recorded the message)
-minus `collected_at` (when the poll saw it), so the answer is on the sensor rather
-than being two timestamps to subtract by hand. It cannot be better than the poll
-interval - the interval, plus however long the API took - so when `delay_s` sits
-near the interval, the interval is the thing to change:
+**How late was it?** `delay_s` is `collected_at` (when the poll recorded the
+message) minus `timestamp` (when XPENG says it was created), so the answer is on
+the sensor rather than being two timestamps to subtract by hand. It is stamped
+once, when the record is collected, so it does not climb as the entity is read.
+It cannot be better than the poll interval - the interval, plus however long the
+API took - so when `delay_s` sits near the interval, the interval is the thing to
+change:
 
 **Settings -> Devices & Services -> XPENG -> Configure -> Message Centre poll
 interval**, default **300 s**, floor 60 s. Every poll is **six requests**, one per

@@ -210,17 +210,27 @@ class TestNotificationSensor(unittest.TestCase):
         ent = XPengNotificationSensor(_FakeCoordinator([{"message": "old"}], 1))
         self.assertIsNone(ent.extra_state_attributes["raw"])
 
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
-
-    def test_the_delay_is_reported_with_the_collection_time(self):
+    def test_the_recorded_latency_is_reported_verbatim(self):
         """The whole point of the sensor for a polled source.
 
         Notifications are not pushed: they are polled, so the delay is the interval
-        plus whatever the API took. It used to be two timestamps to subtract by hand,
-        against a collection time that only the recorder held.
+        plus whatever the API took. record_notification() stamps it once, so the
+        sensor must report that number rather than recompute it against "now" -
+        recomputing made it grow on every read.
         """
+        claimed = "2026-10-27T21:33:46"
+        collected = "2026-10-27T10:34:15.320832+00:00"
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"message": "Charging started", "timestamp": claimed,
+              "collected_at": collected, "delay_s": 29.0}], 1))
+        attrs = ent.extra_state_attributes
+        self.assertEqual(attrs["delay_s"], 29.0)
+        self.assertEqual(attrs["collected_at"], collected)
+        # The claimed time is what XPENG said, not when the poll ran.
+        self.assertEqual(attrs["timestamp"], claimed)
+
+    def test_a_legacy_record_still_gets_a_delay(self):
+        """Records recorded before the stamping existed keep working."""
         sent = datetime.now() - timedelta(minutes=4)
         ent = XPengNotificationSensor(_FakeCoordinator(
             [{"message": "Charging started", "timestamp": sent.isoformat()}], 1))
@@ -234,3 +244,7 @@ if __name__ == "__main__":
         ent = XPengNotificationSensor(_FakeCoordinator(
             [{"message": "x", "timestamp": "not a time"}], 1))
         self.assertIsNone(ent.extra_state_attributes["delay_s"])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

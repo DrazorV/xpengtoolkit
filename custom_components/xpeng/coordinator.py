@@ -18,6 +18,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from . import poll_status
 from .command_policy import CommandPolicy, default_policy
 from .const import DOMAIN
 from .drive_evidence import (
@@ -1140,15 +1141,30 @@ class XPengDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return ""
 
     def record_notification(self, notification: dict[str, Any]) -> None:
-        """Record a push notification (msg_type=3) and fire HA event."""
+        """Record a notification (REST-polled or msg_type=3 push) and fire HA event."""
         now = datetime.now(timezone.utc)
         self.notification_count += 1
         # REST items already arrive carrying `raw` from parse_notification_item;
         # a msg_type=3 push is its own raw record. Captured before the
         # timestamp/local_time fields below, which we add rather than receive.
         notification.setdefault("raw", dict(notification))
-        notification["timestamp"] = now.isoformat()
+        # A polled item already carries XPENG's claimed time in `timestamp`
+        # (parsed from createTime); a push has none, so the moment we record it
+        # is the best available. Overwriting the claim made `delay_s` measure
+        # "age since this poll" - growing on every read - and hid the claimed
+        # time from automations, which is what the docs had always promised.
+        notification.setdefault("timestamp", now.isoformat())
         notification["local_time"] = self._now_str()
+        # Stamped once, at record time: collected_at speaks for itself, and
+        # delay_s = collected_at - claimed is the real latency. Recomputing it
+        # when the entity is read would turn it into time-since-collection.
+        notification["collected_at"] = now.isoformat()
+        notification.setdefault(
+            "delay_s",
+            poll_status.notification_delay_seconds(
+                str(notification.get("timestamp") or ""), now.timestamp()
+            ),
+        )
         self.notifications.append(notification)
 
         # Append to listener log buffer too

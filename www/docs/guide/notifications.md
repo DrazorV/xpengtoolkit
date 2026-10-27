@@ -81,7 +81,10 @@ The state is the message text of the most recent notification (or `code <n>`, or
 | `count` | How many new notifications have arrived since startup. It stays at `0` until something new arrives. |
 | `recent` | The last five records, each with `title`, `message`, `category`, `msg_type`, `read`, `msg_id`, `timestamp` and that record's `raw`. |
 | `raw` | The unparsed record for the latest notification — a Message Centre item, or the MQTT push envelope for a `msg_type=3` push. See [The raw record](#the-raw-record). |
-| `message`, `timestamp`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
+| `timestamp` | When XPENG says the message was created (the Message Centre `createTime`). For a `msg_type=3` push there is no claimed time, so this is when it arrived. |
+| `collected_at` | When the poll recorded the message. |
+| `delay_s` | `collected_at` minus `timestamp`: the poll interval plus however long the API took, or `0` for a push. Stamped once when the record is collected, so it does not grow as the entity is read. |
+| `message`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
 
 The `xpeng_notification` event carries the same flattened record for the
 notification that fired it. Human-readable text is extracted from the app's HTML
