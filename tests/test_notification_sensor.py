@@ -210,6 +210,32 @@ class TestNotificationSensor(unittest.TestCase):
         ent = XPengNotificationSensor(_FakeCoordinator([{"message": "old"}], 1))
         self.assertIsNone(ent.extra_state_attributes["raw"])
 
+    def test_category_title_and_msg_type_are_top_level_attributes(self):
+        """A state trigger only sees attributes: filtering on category needs them there.
+
+        The documentation example for a notification automation conditions on
+        `trigger.to_state.attributes.category`, so it has to exist at the top
+        level, not only inside `recent`.
+        """
+        ent = XPengNotificationSensor(_FakeCoordinator([{
+            "message": "Windows open",
+            "title": "XCOMBO-Benachrichtigung",
+            "category": "XPMOBILE-VEH",
+            "msg_type": "LINK",
+        }], 1))
+        attrs = ent.extra_state_attributes
+        self.assertEqual(attrs["category"], "XPMOBILE-VEH")
+        self.assertEqual(attrs["title"], "XCOMBO-Benachrichtigung")
+        self.assertEqual(attrs["msg_type"], "LINK")
+
+    def test_push_attributes_are_none_without_a_message_centre_record(self):
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"service_type": 12, "message": "x"}], 1))
+        attrs = ent.extra_state_attributes
+        self.assertIsNone(attrs["category"])
+        self.assertIsNone(attrs["title"])
+        self.assertIsNone(attrs["msg_type"])
+
     def test_the_recorded_latency_is_reported_verbatim(self):
         """The whole point of the sensor for a polled source.
 

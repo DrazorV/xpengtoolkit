@@ -84,11 +84,22 @@ The state is the message text of the most recent notification (or `code <n>`, or
 | `timestamp` | When XPENG says the message was created (the Message Centre `createTime`). For a `msg_type=3` push there is no claimed time, so this is when it arrived. |
 | `collected_at` | When the poll recorded the message. |
 | `delay_s` | `collected_at` minus `timestamp`: the poll interval plus however long the API took, or `0` for a push. Stamped once when the record is collected, so it does not grow as the entity is read. |
+| `category`, `title`, `msg_type` | The latest record's classification and display fields, at the top level so a state trigger can filter on them. `None` for a `msg_type=3` push, which is not a Message Centre item. |
 | `message`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
 
 The `xpeng_notification` event carries the same flattened record for the
 notification that fired it. Human-readable text is extracted from the app's HTML
 bodies, so `message` is plain text rather than markup.
+
+### Capture with the event, not the sensor state
+
+An automation that must **record every message** has to trigger on the
+`xpeng_notification` event. The sensor's state is the message text, so a second
+notification with the same text produces no state change — two identical X-Combo
+messages collapse into one. The event fires once per new Message Centre item and
+carries the same fields in `trigger.event.data`. A worked example (event trigger
+plus a Logbook line that keeps the text) is in
+[Capture XPENG notifications](../tutorials/notification-capture).
 
 ### The raw record
 
@@ -152,8 +163,10 @@ automation:
           message: "{{ trigger.to_state.state }}"
 ```
 
-The event is the richer of the two — its data carries `category` and `msg_type`
-directly — while the sensor is simply easier to see and test.
+Both forms carry the same fields now: the event in `trigger.event.data`, the
+sensor as top-level attributes. The event is still the one to use for capture,
+because it fires once per item even when the text repeats; the sensor's state is
+the text, so identical messages produce no state change.
 
 ## Only new notifications fire
 

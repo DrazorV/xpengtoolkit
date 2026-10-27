@@ -973,6 +973,13 @@ class XPengNotificationSensor(XPengEntity, SensorEntity):
                     "msg_id": note.get("msg_id"),
                     "code": note.get("code"),
                     "message": note.get("message"),
+                    # Category/title/msg_type at the top level: a state trigger or
+                    # a UI condition has only `trigger.to_state.attributes`, and
+                    # filtering on the category is the common case. The event
+                    # payload carries the same three, so both forms agree.
+                    "category": note.get("category"),
+                    "title": note.get("title"),
+                    "msg_type": note.get("msg_type"),
                     "timestamp": note.get("timestamp"),
                     "source": note.get("source"),
                     # The record before parsing: what makes a future XPENG field
