@@ -132,6 +132,15 @@ Standard Range LFP pack is about 66 kWh). Driving and charging are excluded.
 | `sensor.xpeng_<vehicle>_tyre_pressure_rear_left` | sensor | kPa | `tpms_pressure_rl` |
 | `sensor.xpeng_<vehicle>_tyre_pressure_rear_right` | sensor | kPa | `tpms_pressure_rr` |
 
+The unit column is what XPENG reports. **Home Assistant converts it for display, so
+kPa, psi, bar (and the rest of HA's pressure units — hPa, Pa, mbar, inHg, mmHg,
+atm, …) are a per-entity setting, not an integration option:** open the entity's
+settings (Settings → Devices & Services → Entities → pick the pressure entity →
+the gear/Settings action) and change **Unit of measurement**. The choice is stored
+in the entity registry, per entity and per car, and survives restarts and renames;
+until one is picked, your Home Assistant unit system decides. Recorded history is
+converted too, so switching later does not break long-term statistics.
+
 ## Doors, windows and body
 
 | Entity | Type | Unit | Notes |
