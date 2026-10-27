@@ -19,7 +19,7 @@ apply to this fork. Never push to the upstream remote without a separate request
 
 ## Upstream translation conventions
 
-- Keep translations/en.json and strings.json identical, with the same leaf keys in every language.
+- Keep translations/en.json and strings.json identical, with the same 342 leaf keys in every language.
 - Run python3 tools/check_translations.py and python3 tests/test_translations.py after translation changes.
 - Set entity translation keys rather than _attr_name; keep English entity IDs through entity_names.py.
 - Follow docs/TRANSLATIONS.md when adding or translating entities.

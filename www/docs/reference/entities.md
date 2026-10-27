@@ -132,14 +132,21 @@ Standard Range LFP pack is about 66 kWh). Driving and charging are excluded.
 | `sensor.xpeng_<vehicle>_tyre_pressure_rear_left` | sensor | kPa | `tpms_pressure_rl` |
 | `sensor.xpeng_<vehicle>_tyre_pressure_rear_right` | sensor | kPa | `tpms_pressure_rr` |
 
-The unit column is what XPENG reports. **Home Assistant converts it for display, so
-kPa, psi, bar (and the rest of HA's pressure units — hPa, Pa, mbar, inHg, mmHg,
-atm, …) are a per-entity setting, not an integration option:** open the entity's
-settings (Settings → Devices & Services → Entities → pick the pressure entity →
-the gear/Settings action) and change **Unit of measurement**. The choice is stored
-in the entity registry, per entity and per car, and survives restarts and renames;
-until one is picked, your Home Assistant unit system decides. Recorded history is
-converted too, so switching later does not break long-term statistics.
+The unit column is what XPENG reports. Home Assistant converts it for display, so
+the four sensors can show kPa, psi, bar (or hPa, Pa, mbar, inHg, mmHg, atm) without
+touching the integration's saved data:
+
+- **All four at once** — Configure → **Tyre pressure unit** sets the default to
+  *Home Assistant unit system*, **kPa**, **psi** or **bar**; see
+  [Integration options](./options#tyre-pressure-units). The default follows your
+  unit system (Settings → System → General).
+- **One entity** — Settings → Devices & Services → Entities → pick the pressure
+  entity → Settings → **Unit of measurement**. That choice is stored in the entity
+  registry, per entity and per car, and **wins over the option above**. It survives
+  restarts and renames.
+
+Recorded history is converted with the display unit, so changing either setting does
+not break long-term statistics.
 
 ## Doors, windows and body
 

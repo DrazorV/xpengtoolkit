@@ -170,6 +170,7 @@
           "teslamate_provider_token": "Token for TeslaMate-leverandøren",
           "legacy_entities": "Behold eldre knapper og dupliserte sensorer",
           "charge_port_controls": "Motoriserte ladeportkontroller",
+          "tyre_pressure_unit": "Enhet for dekktrykk",
           "enable_vehicle_card": "Installer og administrer XPENG-kjøretøykortet for dashbordet"
         },
         "data_description": {
@@ -196,6 +197,7 @@
           "teslamate_provider_token": "Delt hemmelighet. Kopier denne til TeslaMates TOKEN-miljøvariabel; TeslaMate sender den som et bearer-token på hver forespørsel, og leverandøren avviser alt annet. Genereres ved første visning – endrer du den, må TeslaMate logges inn på nytt.",
           "legacy_entities": "Slå av for sammenslåtte cover-entiteter og ladebryter. Utfaser gamle sammenkoblede knapper og dupliserte sensorer; oppdater automatiseringene først. Slå på for å gjenopprette eldre entiteter.",
           "charge_port_controls": "Slå av for en manuell ladeklaff. Ladeportdekselet rapporterer fortsatt tilstand, uten åpne/lukke-handlinger.",
+          "tyre_pressure_unit": "Hvordan de fire dekktrykksensorene vises: Home Assistants enhetssystem, eller en fast kPa, psi eller bar. En enhet som er valgt på en enkelt entitet i innstillingene, har fortsatt forrang.",
           "enable_vehicle_card": "Valgfritt, av som standard. Registrerer én delt kortressurs, oppdaterer den med integrasjonen og migrerer samsvarende eldre /local/-kortressurser. I YAML-ressursmodus lastes modulen globalt; fjern eventuell gammel manuell XPENG-ressurs fra YAML én gang. Slår du dette av for alle kjøretøy, eller fjerner det siste kjøretøyet som har valgt det, fjernes den administrerte ressursen. Dashbordoppsett redigeres aldri."
         }
       },
