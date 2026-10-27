@@ -126,14 +126,14 @@ conditions:
 The integration parses the text out of `messageContent`, an HTML/JSON blob that
 XPENG can change. If a release starts showing an empty `message`:
 
-1. Read `raw` from the event (`{{ trigger.event.data.raw | tojson }}` in a
-   template, or the sensor's `raw` attribute). It contains exactly what arrived,
-   with the original field names.
+1. Read `raw` from the event — render `trigger.event.data.raw` with a `tojson`
+   filter in a template, or read the sensor's `raw` attribute. It contains
+   exactly what arrived, with the original field names.
 2. Report it (or fix the parser) from that record — no need to reproduce the
    notification to see its shape. `raw` is deliberately not parsed, so it keeps
    fields the current parser does not know about.
-3. If you need the raw record in the Logbook, log
-   `{{ trigger.event.data.raw | tojson }}` instead of `message`.
+3. If you need the raw record in the Logbook, log `trigger.event.data.raw`
+   through `tojson` instead of `message`.
 
 Turn on debug logging while investigating:
 
