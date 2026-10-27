@@ -170,6 +170,7 @@
           "teslamate_provider_token": "Jeton du fournisseur TeslaMate",
           "legacy_entities": "Conserver les boutons hérités et les capteurs en double",
           "charge_port_controls": "Commandes de la trappe de recharge motorisée",
+          "tyre_pressure_unit": "Unité de pression des pneus",
           "enable_vehicle_card": "Installer et gérer la carte de tableau de bord XPENG Vehicle"
         },
         "data_description": {
@@ -196,6 +197,7 @@
           "teslamate_provider_token": "Secret partagé. Copiez-le dans la variable d'environnement TOKEN de TeslaMate\u00a0; TeslaMate l'envoie comme jeton porteur à chaque requête et le fournisseur rejette toute autre valeur. Généré à la première consultation — si vous le changez, TeslaMate doit se reconnecter.",
           "legacy_entities": "Désactivez pour des entités de volet et un interrupteur de charge unifiés. Retire les anciens boutons appairés et les capteurs en double\u00a0; mettez d'abord à jour les automatisations. Réactivez pour restaurer les entités héritées.",
           "charge_port_controls": "Désactivez pour une trappe de recharge manuelle. L'entité de volet de la trappe de recharge continue de remonter son état, sans actions d'ouverture ni de fermeture.",
+          "tyre_pressure_unit": "Comment les quatre capteurs de pression des pneus sont affichés : le système d'unités de Home Assistant, ou une unité fixe kPa, psi ou bar. Une unité choisie sur une entité dans ses réglages reste prioritaire.",
           "enable_vehicle_card": "Facultative, désactivée par défaut. Enregistre une ressource de carte partagée, la met à jour avec l'intégration et migre les ressources de carte /local/ héritées correspondantes. En mode ressource YAML, elle charge le module globalement\u00a0; supprimez une fois toute ancienne ressource XPENG manuelle du YAML. Désactiver cette option pour tous les véhicules, ou retirer le dernier véhicule l'ayant activée, supprime la ressource gérée. Les dispositions des tableaux de bord ne sont jamais modifiées."
         }
       },

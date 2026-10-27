@@ -41,6 +41,11 @@ from .command_policy import (
     SELECTABLE_PRESETS,
 )
 from .entity_layout import CONF_LEGACY_ENTITIES, legacy_entities_enabled
+from .display_units import (
+    CONF_TYRE_PRESSURE_UNIT,
+    DEFAULT_TYRE_PRESSURE_UNIT,
+    TYRE_PRESSURE_UNIT_OPTIONS,
+)
 from .frontend import CONF_ENABLE_VEHICLE_CARD
 from .xpeng_api import resolve_cert_dir
 from .const import (
@@ -1677,6 +1682,22 @@ class XPengOptionsFlow(OptionsFlow):
                         CONF_CHARGE_PORT_CONTROLS,
                         default=bool(current.get(CONF_CHARGE_PORT_CONTROLS, True)),
                     ): bool,
+                    # The display unit is Home Assistant's to convert - it already
+                    # offers kPa/psi/bar per entity and a unit picked there wins.
+                    # This only sets the default for the four tyre sensors, so an
+                    # install that wants bar (or psi) does not edit four entities.
+                    vol.Optional(
+                        CONF_TYRE_PRESSURE_UNIT,
+                        default=current.get(
+                            CONF_TYRE_PRESSURE_UNIT,
+                            DEFAULT_TYRE_PRESSURE_UNIT,
+                        ),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=TYRE_PRESSURE_UNIT_OPTIONS,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
                         default=current.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
