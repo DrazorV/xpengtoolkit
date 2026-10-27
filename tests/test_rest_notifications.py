@@ -189,6 +189,42 @@ class TestParser(unittest.TestCase):
         out = api.parse_notification_item({})     # must not raise
         self.assertEqual(out["id"], "")
 
+    def test_raw_record_is_preserved_exactly(self):
+        """The unparsed item must survive, so a field rename is recoverable.
+
+        Only five top-level keys exist on the wire today. Keeping the whole item
+        means a rename shows up in a captured event/attribute rather than as a
+        silently empty `message`.
+        """
+        out = api.parse_notification_item(self.ITEM)
+        self.assertEqual(out["raw"], self.ITEM)
+        # `messageContent` must stay the JSON string it arrived as: parsing it
+        # would throw away exactly the field a future rename would need.
+        self.assertIsInstance(out["raw"]["messageContent"], str)
+        self.assertEqual(out["raw"]["messageContent"],
+                         self.ITEM["messageContent"])
+
+    def test_raw_is_a_copy_not_the_caller_dict(self):
+        item = dict(self.ITEM)
+        out = api.parse_notification_item(item)
+        item["id"] = "mutated afterwards"
+        self.assertEqual(out["raw"]["id"], "1558173270679261184")
+
+    def test_parsing_does_not_mutate_the_item(self):
+        item = dict(self.ITEM)
+        before = json.dumps(item, sort_keys=True)
+        api.parse_notification_item(item)
+        self.assertEqual(json.dumps(item, sort_keys=True), before)
+
+    def test_raw_present_for_an_empty_item(self):
+        self.assertEqual(api.parse_notification_item({})["raw"], {})
+
+    def test_raw_kept_for_non_json_message_content(self):
+        # messageContent is only sometimes valid JSON; the raw copy must hold the
+        # original string either way.
+        out = api.parse_notification_item(
+            dict(self.ITEM, messageContent="<p>just html</p>"))
+        self.assertEqual(out["raw"]["messageContent"], "<p>just html</p>")
 
 
 

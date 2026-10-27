@@ -44,7 +44,8 @@ the notifications a user cares about. Since 0.6.15 it is tracked where a session
 event belongs:
 
 - **`xpeng_account_takeover`** — a bus event carrying the notice
-  (`service_type`, `code`, `message`, `msg_id`, `timestamp`);
+  (`service_type`, `code`, `message`, `msg_id`, `timestamp`, and `raw` — the
+  push envelope it arrived in);
 - `sensor.xpeng_<vehicle>_polling_status` attributes **`last_takeover_at`** and
   **`account_takeovers`** (count since startup);
 - the INFO line the MQTT client logs (`Account signed in elsewhere - expecting a
@@ -78,12 +79,39 @@ The state is the message text of the most recent notification (or `code <n>`, or
 | Attribute | Contents |
 | --- | --- |
 | `count` | How many new notifications have arrived since startup. It stays at `0` until something new arrives. |
-| `recent` | The last five Message Centre records, each with `title`, `message`, `category`, `msg_type`, `read`, `msg_id` and `timestamp`. |
+| `recent` | The last five records, each with `title`, `message`, `category`, `msg_type`, `read`, `msg_id`, `timestamp` and that record's `raw`. |
+| `raw` | The unparsed record for the latest notification — a Message Centre item, or the MQTT push envelope for a `msg_type=3` push. See [The raw record](#the-raw-record). |
 | `message`, `timestamp`, `source`, `code`, `msg_id` | The flattened fields of the latest record, for convenience. |
 
 The `xpeng_notification` event carries the same flattened record for the
 notification that fired it. Human-readable text is extracted from the app's HTML
 bodies, so `message` is plain text rather than markup.
+
+### The raw record
+
+Both the sensor's `raw` attribute and the event's `raw` field carry the record
+exactly as it arrived, before any parsing. A polled notification is a Message
+Centre item:
+
+```json
+{
+  "id": "1558173270679261184",
+  "messageId": "1558173270679261184",
+  "read": false,
+  "createTime": "2026-10-09 09:44:17.0000",
+  "messageContent": "{\"msgContent\":{\"title\":\"XCOMBO-...\",\"description\":\"<p>...</p>\"},...}"
+}
+```
+
+A rare `msg_type=3` push carries the MQTT envelope instead — `msg_type`,
+`service_type`, `msg_id` and the nested `msg_content` — because that envelope is
+where the extra fields live; the flattened top level is what parsing produced.
+
+`messageContent` is deliberately left as the original JSON *string*, not the
+parsed object. That is the point: if XPENG renames or moves a field the parser
+reads, the captured `raw` still holds it, so the parser can be fixed from the
+event or the entity's attributes instead of needing a new live capture. Nothing
+in the integration depends on `raw`'s contents — it exists for that failure mode.
 
 ## Triggering automations
 

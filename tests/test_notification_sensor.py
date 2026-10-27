@@ -191,6 +191,25 @@ class TestNotificationSensor(unittest.TestCase):
         self.assertEqual(ent.extra_state_attributes["count"], 0)
         self.assertEqual(ent.extra_state_attributes["recent"], [])
 
+    def test_raw_record_is_exposed(self):
+        """The unparsed record must be readable from the entity, not just the event."""
+        raw = {
+            "id": "1558173270679261184",
+            "messageId": "1558173270679261184",
+            "read": False,
+            "createTime": "2026-10-09 09:44:17.0000",
+            "messageContent": '{"msgContent":{"description":"<p>x</p>"}}',
+        }
+        ent = XPengNotificationSensor(_FakeCoordinator(
+            [{"message": "Windows open", "raw": raw}], 1))
+        self.assertEqual(ent.extra_state_attributes["raw"], raw)
+        # `recent` passes the recorded dicts straight through, so it carries raw too.
+        self.assertEqual(ent.extra_state_attributes["recent"][-1]["raw"], raw)
+
+    def test_raw_is_none_when_the_record_has_none(self):
+        ent = XPengNotificationSensor(_FakeCoordinator([{"message": "old"}], 1))
+        self.assertIsNone(ent.extra_state_attributes["raw"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

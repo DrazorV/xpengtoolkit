@@ -1143,6 +1143,10 @@ class XPengDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Record a push notification (msg_type=3) and fire HA event."""
         now = datetime.now(timezone.utc)
         self.notification_count += 1
+        # REST items already arrive carrying `raw` from parse_notification_item;
+        # a msg_type=3 push is its own raw record. Captured before the
+        # timestamp/local_time fields below, which we add rather than receive.
+        notification.setdefault("raw", dict(notification))
         notification["timestamp"] = now.isoformat()
         notification["local_time"] = self._now_str()
         self.notifications.append(notification)

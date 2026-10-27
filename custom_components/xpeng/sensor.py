@@ -965,6 +965,9 @@ class XPengNotificationSensor(XPengEntity, SensorEntity):
                     "message": note.get("message"),
                     "timestamp": note.get("timestamp"),
                     "source": note.get("source"),
+                    # The record before parsing: what makes a future XPENG field
+                    # rename fixable from this entity's attributes alone.
+                    "raw": note.get("raw"),
                     "delay_s": poll_status.notification_delay_seconds(
                         note.get("timestamp"), time.time()
                     ),

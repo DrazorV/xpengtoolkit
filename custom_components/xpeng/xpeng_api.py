@@ -2382,6 +2382,8 @@ def parse_notification_item(item: dict[str, Any]) -> dict[str, Any]:
     ``messageContent`` is a JSON *string*, only sometimes valid, and the
     description is HTML - both are handled here so callers get plain text.
     """
+    _LOGGER.debug("Message-centre item raw: %s", item)
+
     import re as _re
 
     out: dict[str, Any] = {
@@ -2390,6 +2392,10 @@ def parse_notification_item(item: dict[str, Any]) -> dict[str, Any]:
         "read": bool(item.get("read")),
         "timestamp_raw": item.get("createTime") or "",
         "source": "rest",
+        # The record before any parsing, so an XPENG field rename can be fixed
+        # from a captured event or sensor attribute instead of a live probe.
+        # `messageContent` stays the JSON *string* here, not the parsed dict.
+        "raw": dict(item),
     }
 
     # createTime is "YYYY-MM-DD HH:MM:SS.0000" - space separator, 4-digit

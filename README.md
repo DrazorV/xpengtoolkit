@@ -333,6 +333,12 @@ integration polls that list. A new one appears within one poll interval as:
   `delay_s` / `collected_at` in the attributes
 - **`xpeng_notification`** - a bus event carrying the same flattened fields
 
+Both also carry **`raw`**: the unparsed record as it arrived - the Message Centre
+item (with `messageContent` still its original JSON string) for a polled
+notification, or the MQTT push envelope for a rare `msg_type=3` push. It is not
+needed for normal use - it is what lets a future XPENG field rename be fixed from
+a captured event or a look at the sensor's attributes.
+
 **How late was it?** `delay_s` is `timestamp` (when XPENG recorded the message)
 minus `collected_at` (when the poll saw it), so the answer is on the sensor rather
 than being two timestamps to subtract by hand. It cannot be better than the poll
