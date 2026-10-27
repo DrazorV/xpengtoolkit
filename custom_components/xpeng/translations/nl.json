@@ -170,6 +170,7 @@
           "teslamate_provider_token": "Token van de TeslaMate-provider",
           "legacy_entities": "Oude knoppen en dubbele sensoren behouden",
           "charge_port_controls": "Bediening van de gemotoriseerde laadpoort",
+          "tyre_pressure_unit": "Eenheid voor bandenspanning",
           "enable_vehicle_card": "XPENG Vehicle-dashboardkaart installeren en beheren"
         },
         "data_description": {
@@ -196,6 +197,7 @@
           "teslamate_provider_token": "Gedeeld geheim. Kopieer dit naar de TOKEN-omgevingsvariabele van TeslaMate; TeslaMate stuurt het als bearertoken mee bij elk verzoek en de provider weigert al het andere. Wordt aangemaakt bij de eerste weergave - wijzig je het, dan moet TeslaMate opnieuw inloggen.",
           "legacy_entities": "Zet uit voor uniforme covers en de laadschakelaar. Schakelt oude gepaarde knoppen en dubbele sensoren uit; werk eerst je automatiseringen bij. Zet aan om de oude entiteiten te herstellen.",
           "charge_port_controls": "Zet uit voor een handmatig laadklepje. De cover van de laadpoort meldt nog steeds de status, zonder acties om te openen of te sluiten.",
+          "tyre_pressure_unit": "Hoe de vier bandenspanningssensoren worden weergegeven: het eenhedensysteem van Home Assistant, of een vaste kPa, psi of bar. Een eenheid die op een afzonderlijke entiteit in de instellingen is gekozen, heeft nog steeds voorrang.",
           "enable_vehicle_card": "Optioneel, standaard uit. Registreert één gedeelde kaartbron, werkt die bij met de integratie en migreert overeenkomende oude /local/-kaartbronnen. In de YAML-bronmodus laadt het de module globaal; verwijder eenmalig een oude handmatige XPENG-bron uit YAML. Als je dit voor alle voertuigen uitzet, of het laatste voertuig dat heeft ingestemd verwijdert, wordt de beheerde bron verwijderd. Dashboardindelingen worden nooit bewerkt."
         }
       },

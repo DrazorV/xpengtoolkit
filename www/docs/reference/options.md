@@ -34,12 +34,31 @@ directory (see [Certificate directory](#certificate-directory)).
 | `command_mode` | Command permissions | `safe_plus` on a new entry; Full access when unset | `read_only` / `safe` / `safe_plus` / `full` / `custom` |
 | `allow_wake` | Allow the integration to wake the car | on | on / off |
 | `charge_port_controls` | Motorized charge-port controls (off = manual flap) | on | on / off |
+| `tyre_pressure_unit` | Tyre pressure unit | Home Assistant unit system | Home Assistant unit system / kPa / psi / bar |
 | `iccid` | TBox SIM ICCID | empty | free text, diagnostic only |
 | `usable_battery_kwh` | Usable battery capacity (kWh) | `87.5` | `10`–`150` |
 
 Ranges are the `vol.Range(...)` bounds enforced in `config_flow.py`, and the help
 text quotes the same numbers. Where the code and the translations disagree, that
 is noted in the option's own section below.
+
+## Tyre pressure units
+
+The four tyre-pressure sensors report **kPa**. Home Assistant already converts any
+pressure sensor for display — its table covers kPa, psi, bar, hPa, Pa, mbar, inHg,
+mmHg and atm — so this option only chooses what the four sensors should default
+to:
+
+| Choice in the form | Effect |
+| --- | --- |
+| **Home Assistant unit system** | No unit is suggested; your unit system decides (Settings → System → General). This is the default and is what previous versions did. |
+| **kPa** / **psi** / **bar** | The four sensors display in that unit. The native value stays kPa; the conversion is Home Assistant's. |
+
+A unit chosen on an **individual** entity still wins: Settings → Devices & Services
+→ Entities → the pressure entity → Settings → **Unit of measurement**. That choice
+is stored in the entity registry, so it survives restarts and renames, and turning
+this option off does not overwrite it. Recorded history is converted with the
+display unit, so changing either setting does not break long-term statistics.
 
 ## Polling intervals
 

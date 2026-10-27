@@ -170,6 +170,7 @@
           "teslamate_provider_token": "Token des TeslaMate-Providers",
           "legacy_entities": "Alte Buttons und doppelte Sensoren beibehalten",
           "charge_port_controls": "Steuerung des motorisierten Ladeanschlusses",
+          "tyre_pressure_unit": "Einheit für den Reifendruck",
           "enable_vehicle_card": "XPENG-Fahrzeug-Dashboardkarte installieren und verwalten"
         },
         "data_description": {
@@ -196,6 +197,7 @@
           "teslamate_provider_token": "Gemeinsames Geheimnis. Kopiere es in die Umgebungsvariable TOKEN von TeslaMate; TeslaMate sendet es bei jeder Anfrage als Bearer-Token, und der Provider lehnt alles andere ab. Wird bei der ersten Ansicht erzeugt - änderst du es, muss TeslaMate neu angemeldet werden.",
           "legacy_entities": "Zum Ausschalten für einheitliche Cover-Entitäten und einen Ladeschalter. Setzt alte gepaarte Buttons und doppelte Sensoren außer Betrieb; aktualisiere zuerst deine Automatisierungen. Zum Wiedereinschalten der alten Entitäten wieder einschalten.",
           "charge_port_controls": "Zum Ausschalten für eine manuelle Ladeklappe. Die Abdeckung des Ladeanschlusses meldet weiterhin ihren Zustand, aber ohne Öffnen-/Schließen-Aktionen.",
+          "tyre_pressure_unit": "Wie die vier Reifendrucksensoren angezeigt werden: das Einheitensystem von Home Assistant oder ein festes kPa, psi oder bar. Eine auf einer einzelnen Entität in deren Einstellungen gewählte Einheit hat weiterhin Vorrang.",
           "enable_vehicle_card": "Optional, standardmäßig aus. Registriert eine gemeinsam genutzte Kartenressource, aktualisiert sie mit der Integration und migriert passende alte /local/-Kartenressourcen. Im YAML-Ressourcenmodus lädt es das Modul global; entferne einmalig alle alten manuellen XPENG-Ressourcen aus YAML. Wird dies für alle Fahrzeuge ausgeschaltet oder das letzte Fahrzeug entfernt, das zugestimmt hat, wird die verwaltete Ressource entfernt. Dashboard-Layouts werden nie bearbeitet."
         }
       },

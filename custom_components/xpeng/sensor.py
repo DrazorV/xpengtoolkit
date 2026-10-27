@@ -23,6 +23,10 @@ from homeassistant.helpers.event import (
 from . import poll_status
 from .const import DOMAIN, SENSOR_DESCRIPTIONS, XPengSensorEntityDescription
 from .coordinator import XPengDataCoordinator
+from .display_units import (
+    CONF_TYRE_PRESSURE_UNIT,
+    suggested_tyre_pressure_unit,
+)
 from .entity import XPengEntity
 from .entity_layout import include_legacy_entity
 from .command_policy import default_policy
@@ -65,8 +69,15 @@ async def async_setup_entry(
     """Set up XPENG sensor entities."""
     coordinator: XPengDataCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
+    # One suggested unit for the four tyre sensors; Home Assistant converts the
+    # native kPa value. A unit chosen on an individual entity in HA's own settings
+    # is stored in the entity registry and takes precedence over this.
+    tyre_pressure_unit = suggested_tyre_pressure_unit(
+        entry.options.get(CONF_TYRE_PRESSURE_UNIT)
+    )
+
     entities: list[SensorEntity] = [
-        XPengSensor(coordinator, description)
+        XPengSensor(coordinator, description, tyre_pressure_unit)
         for description in SENSOR_DESCRIPTIONS
         if include_legacy_entity(
             entry,
@@ -138,11 +149,17 @@ class XPengSensor(XPengEntity, SensorEntity):
         self,
         coordinator: XPengDataCoordinator,
         description: XPengSensorEntityDescription,
+        tyre_pressure_unit: str | None = None,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"xpeng_{self._vin}_{description.key}"
+        if tyre_pressure_unit and description.key.startswith("tyre_pressure_"):
+            # A suggested unit, not a hard unit: Home Assistant converts the
+            # native kPa reading for display, and a unit picked on this entity in
+            # HA's settings takes precedence over it.
+            self._attr_suggested_unit_of_measurement = tyre_pressure_unit
 
     @property
     def native_value(self) -> Any:
