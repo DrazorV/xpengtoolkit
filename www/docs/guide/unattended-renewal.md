@@ -131,7 +131,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Image tags are the app versions (`:0.1.21`, ...); `:latest` tracks the newest.
+Image tags are the app versions (`:0.1.22`, ...); `:latest` tracks the newest.
 Building from source still works if you would rather not pull a registry image:
 
 ```bash
@@ -261,8 +261,11 @@ Each account needs its own renewal app instance. Give each instance:
   service name under the Supervisor;
 * optionally its own **`entry_id`**. Left empty, the app selects the entry whose
   title ends with the pair's VIN suffix (`XPENG <last six>`), so the instances stay
-  independent with nothing to copy. Set `entry_id` only when that is ambiguous,
-  for example after renaming an entry.
+  independent with nothing to copy. A pair whose VIN matches **no** entry is treated
+  as belonging to a car Home Assistant does not have yet: it creates a new entry
+  instead of being delivered to whichever entry happens to exist. Set `entry_id`
+  only when the title is not one the integration wrote, for example after renaming
+  an entry.
 
 The solver can be shared: it solves the slider, not the account.
 

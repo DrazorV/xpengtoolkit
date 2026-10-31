@@ -390,8 +390,16 @@ def _select_entry(entries: list[dict]) -> dict | None:
 
     A config entry is titled ``XPENG <last six of the VIN>`` (the same suffix the
     credentials entity is built from), so two cars in one Home Assistant resolve to
-    their own entries. A single-entry install keeps the old behaviour even when the
-    pair has no readable VIN, so an upgrade cannot start refusing deliveries.
+    their own entries. A single-entry install keeps the old behaviour when the pair
+    has no readable VIN, so an upgrade cannot start refusing deliveries.
+
+    A VIN that IS readable but matches no title is not that case: this pair belongs
+    to a car this Home Assistant does not know yet, so the answer is "absent" and
+    the import bootstraps an entry. Falling back to the only entry imported car B's
+    pair into car A's entry, and two renewal instances then rotated one account's
+    credentials against each other (issue #18, measured 2026-10-30). ``entry_id``
+    remains the way to say "this pair goes into that entry" for a title this
+    integration did not write, such as a renamed entry.
     """
     vin = _vin_from_pair(PAIR_DIR).lower()
     if vin:
@@ -399,6 +407,7 @@ def _select_entry(entries: list[dict]) -> dict | None:
         for entry in entries:
             if str(entry.get("title") or "").strip().lower().endswith(suffix):
                 return entry
+        return None
     return entries[0] if len(entries) == 1 else None
 
 

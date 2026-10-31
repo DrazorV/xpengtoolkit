@@ -166,6 +166,45 @@ class VinParsingTests(unittest.TestCase):
         self.assertEqual(app._vin_from_pair("/nonexistent"), "")
 
 
+class SelectEntryTests(unittest.TestCase):
+    """Which entry a pair is delivered to, because a wrong answer moves a session.
+
+    Issue #18 (2026-10-30): a second car's pair, on an install that already had one
+    entry, was imported into that entry because "there is only one entry" was treated
+    as an answer. The two renewal instances then rotated one account's credentials
+    against each other (12010104, MQTT "Not authorized").
+    """
+
+    VIN_A = "L1NNSGHA3SB123456"
+    VIN_B = "L1NNSGHA3SB654321"
+
+    def _app(self, vin):
+        app = _load_module("bootstrap_app_sel", "xpeng_renew/renew_server.py")
+        app.VIN = vin
+        return app
+
+    def test_a_pair_finds_the_entry_whose_title_ends_with_its_vin(self):
+        app = self._app(self.VIN_A)
+        entries = [{"title": "XPENG 654321"}, {"title": "XPENG 123456"}]
+        self.assertEqual(app._select_entry(entries)["title"], "XPENG 123456")
+
+    def test_a_readable_vin_that_matches_no_entry_bootstraps(self):
+        """#18: car B's pair must not be imported into car A's only entry."""
+        app = self._app(self.VIN_B)
+        self.assertIsNone(app._select_entry([{"title": "XPENG 123456"}]))
+
+    def test_an_unreadable_vin_keeps_the_single_entry_upgrade_path(self):
+        """A pair written before the VIN was recorded must still be delivered."""
+        app = self._app("")
+        entries = [{"title": "XPENG 123456"}]
+        self.assertEqual(app._select_entry(entries), entries[0])
+
+    def test_an_unreadable_vin_does_not_pick_between_two_entries(self):
+        app = self._app("")
+        entries = [{"title": "XPENG 123456"}, {"title": "XPENG 654321"}]
+        self.assertIsNone(app._select_entry(entries))
+
+
 if __name__ == "__main__":
     unittest.main()
 

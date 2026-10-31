@@ -44,7 +44,7 @@ Configure the worker:
 | `renew_token` | what the automation presents to `POST /renew`. **Set this** — the worker holds your password. |
 | `notify_on_success` | send a persistent notification after every successful renewal (default `true`). Failures still notify after two consecutive attempts. |
 | `pair_dir` | where the fresh pair is written for Home Assistant to read; `/config/xpeng-secrets` by default. |
-| `entry_id` | target one config entry by its id instead of the entry whose title matches this pair's VIN. Only needed when more than one XPENG entry exists — two cars on two accounts. |
+| `entry_id` | target one config entry by its id instead of the entry whose title matches this pair's VIN. Only needed when more than one XPENG entry exists — two cars on two accounts — or when the entry was renamed. A pair whose VIN matches no entry creates a new one rather than landing in the only existing entry. |
 | `command_mode` | what the integration may do to the car when this app creates the entry (`read_only`, `safe`, `safe_plus`, `full`; `charging` is the old name for `safe_plus`). Defaults to `safe_plus` - see the README's Command permissions section |
 
 Give the pair directory a second thought: it is live credentials on disk, readable
