@@ -267,7 +267,14 @@ Each account needs its own renewal app instance. Give each instance:
   only when the title is not one the integration wrote, for example after renaming
   an entry.
 
-The solver can be shared: it solves the slider, not the account.
+The solver can normally be shared: it solves the slider, not the account. One
+caveat worth knowing before blaming the accounts: a solver instance keeps **one
+Chromium process** for its lifetime and opens a fresh browser context per solve, so
+everything below the context — the browser-level fingerprint — is identical for
+every account it logs in for. If two accounts on one install keep evicting each
+other's sessions (each new login killing the other's within minutes), run one
+solver instance per account and compare the session lifetimes; that is the one
+shared piece worth splitting before assuming XPENG links the accounts by IP.
 
 The app names the selected entry explicitly in `xpeng.import_credentials`, so a
 pair minted for one car cannot land in the other car's entry.
