@@ -27,3 +27,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Local architecture-explainer output (harness tooling, not source).
+.archify/
