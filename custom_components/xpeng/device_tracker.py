@@ -59,6 +59,21 @@ class XPengDeviceTracker(XPengEntity, TrackerEntity):
         return fix[1] if fix else None
 
     @property
+    def course(self) -> float | None:
+        """Return the direction the car faces, in degrees, or None.
+
+        Home Assistant's map card rotates the marker from ``course``; ``bearing``
+        keeps the same raw value as an attribute for existing templates. None
+        when the car has never reported an angle, so a number cannot be drawn as
+        a heading the car did not send.
+        """
+        angle = self._get_nested_value("msg_content.interval.drive.angle")
+        try:
+            return None if angle is None else float(angle)
+        except (TypeError, ValueError):
+            return None
+
+    @property
     def extra_state_attributes(self) -> dict[str, str | float | bool | None]:
         """Return extra attributes.
 
