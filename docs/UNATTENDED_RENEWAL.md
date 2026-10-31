@@ -33,6 +33,13 @@ Both are needed, and both are ordinary apps:
   -> three-dot menu -> Repositories -> add
   `https://github.com/xpengtoolkit/xpengtoolkit`, then install it.
 
+A second car on its own XPENG account installs the repository's second slot,
+**XPENG credential renewal (2nd car)**: the same worker and the same published image,
+with host port `8091` and `pair_dir` `/config/xpeng-secrets-2` as its defaults. Give
+it the second account's email and password and leave `entry_id` empty — the pair's VIN
+selects its own config entry. The first slot's defaults are port `8090` and
+`/config/xpeng-secrets`.
+
 Configure the worker:
 
 | Option | Meaning |

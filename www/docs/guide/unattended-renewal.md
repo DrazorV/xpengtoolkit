@@ -51,6 +51,12 @@ repository's URL and the solver's, then install both. (Home Assistant renamed
 add-ons to **apps** in 2026.2; older releases call the same screen the Add-on
 Store.)
 
+The same repository also ships a **second slot** of the renewal app, **XPENG
+credential renewal (2nd car)**: the same worker and the same published image, with
+host port `8091` and `pair_dir` `/config/xpeng-secrets-2` as its defaults. Install
+it only when a second car has its own account — see
+[Two cars, two accounts](#two-cars-two-accounts).
+
 ![The app store with both XPENG apps](../images/apps-store.png)
 
 The solver is self-hosted and separate. It clears the account owner's own
@@ -252,13 +258,20 @@ share each car to its own dedicated account, never the phone-app account. Home
 Assistant then has one XPENG config entry per account, and the two sessions do not
 evict each other.
 
-Each account needs its own renewal app instance. Give each instance:
+Each account needs its own renewal app instance. Installing **XPENG credential
+renewal (2nd car)** from the same repository gives you that: it is the same worker on
+the same published image, with the second instance's defaults already applied — host
+port `8091` and `pair_dir` `/config/xpeng-secrets-2`. Give it the second account's
+`email` and `password` and leave `entry_id` empty.
+
+Whichever route you take for the second (and any further) car, these are what have to
+be distinct:
 
 * its own **`pair_dir`** — for example `/config/xpeng-secrets-g9` and
   `/config/xpeng-secrets-x9`, each mounted into Home Assistant at the same absolute
   path. Two instances sharing one directory overwrite each other's pair;
-* its own **port** if both run as plain containers (`8090` and `8091`), or its own
-  service name under the Supervisor;
+* its own **port** — `8090` for the first slot and `8091` for the second are the
+  defaults; plain containers pick the host port explicitly;
 * optionally its own **`entry_id`**. Left empty, the app selects the entry whose
   title ends with the pair's VIN suffix (`XPENG <last six>`), so the instances stay
   independent with nothing to copy. A pair whose VIN matches **no** entry is treated
@@ -266,6 +279,11 @@ Each account needs its own renewal app instance. Give each instance:
   instead of being delivered to whichever entry happens to exist. Set `entry_id`
   only when the title is not one the integration wrote, for example after renaming
   an entry.
+
+A third car has no shipped slot: copy the `xpeng_renew_2` folder into `/addons/`,
+change its `slug`, keep its `image:`, and give it a third `pair_dir` and port. There
+is no second copy of the worker to keep in step, which is the point of the slot being
+packaging only.
 
 The solver can normally be shared: it solves the slider, not the account. One
 caveat worth knowing before blaming the accounts: a solver instance keeps **one

@@ -8,6 +8,7 @@ renewal app drives the integration through
 | App | Repository | What it is for |
 | --- | --- | --- |
 | XPENG credential renewal | `xpengtoolkit/xpengtoolkit` | Logs in again before XPENG retires the session (~2 h after a login), mints a fresh token/tenant pair, and imports it |
+| XPENG credential renewal (2nd car) | `xpengtoolkit/xpengtoolkit` | The same worker as a second slot, for a second car on its own account: host port `8091` and `pair_dir` `/config/xpeng-secrets-2` are the only defaults that differ |
 | XPENG slider solver | `xpengtoolkit/slider-solver` | Solves the XPENG login slider captcha (NetEase Yidun) headlessly, so the re-login needs no human |
 
 ::: info
@@ -52,6 +53,12 @@ imports it. If there is no config entry yet it creates one first — see
 
 The renewal app declares no minimum or maximum for `renew_interval` or
 `invalid_poll_interval` beyond "integer", so the Supervisor accepts any value.
+
+The **2nd car** slot declares the same options and schema. Only two defaults differ —
+`pair_dir` is `/config/xpeng-secrets-2` and the mapped host port is `8091` — and it
+pulls the published `ghcr.io/xpengtoolkit/xpeng-renew` image instead of building its
+own, so both slots always run the same worker. `tests/test_addon_slots.py` keeps the
+two files' versions, options and schema identical.
 
 `command_mode` is only *applied* when the app creates a config entry - an install
 that already has one keeps whatever the integration is set to, and changing it

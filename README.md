@@ -644,6 +644,13 @@ repository's URL and the solver's, then install both. (Home Assistant renamed
 add-ons to **apps** in 2026.2; older releases call the same screen the Add-on
 Store.)
 
+A **second car on its own XPENG account** installs the second slot from the same
+repository, **XPENG credential renewal (2nd car)** - the same worker and the same
+published image, with host port `8091` and `pair_dir` `/config/xpeng-secrets-2` as
+its defaults. Give it the second account's `email` and `password` and leave
+`entry_id` empty; the pair's VIN picks its own config entry, so the two renewals
+never touch each other's session.
+
 Then configure the renewal app:
 
 | Option | Value |
