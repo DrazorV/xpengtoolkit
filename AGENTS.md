@@ -27,9 +27,12 @@ in [`.cursor/rules/publish-identity.mdc`](.cursor/rules/publish-identity.mdc).
 - Credentials never enter git: `custom_components/xpeng/certs/*.pem`,
   `xpeng_tokens.json` and `xpeng_tenant.json` are ignored. Check
   `git diff --cached --name-only` before committing.
-- Releases: bump `custom_components/xpeng/manifest.json`, commit with a `0.4.x:` title,
-  tag `v0.4.x`, then `gh release create 0.4.x`. The companion app is versioned
-  separately in `xpeng_renew/config.yaml`.
+- Releases: bump `custom_components/xpeng/manifest.json`, commit with a `0.6.x:` title,
+  tag `0.6.x` — bare, no `v`: the `v`-prefixed tags stop at `v0.6.24`, so the bare
+  form has been the convention since 0.6.25 — then
+  `gh release create 0.6.x --title "<the commit title>" --notes-file <file>`. The
+  companion app is versioned separately in `xpeng_renew/config.yaml`; a push touching
+  `xpeng_renew/**` rebuilds its GHCR image automatically (`Renewal image` workflow).
 
   On this exFAT workspace `git add -A` occasionally misses the file you just wrote
   (git's stat cache cannot see the coarse mtime change). Re-run
