@@ -21,6 +21,9 @@ upstream and is no longer part of the fork patch; see
 Main is current upstream plus one consolidated fork-configuration commit. The
 integration, bundled card, renewal server, second renewal-app slot and vendored
 sources match upstream; manifest.json differs only in the fork issue-tracker URL.
+The renewal app's vendored `xpeng_api.py` is also refreshed from the integration,
+because upstream 0.6.45 and 0.6.46 left it stale and its drift test fails; drop
+this once upstream refreshes the copy.
 Fork configuration includes the DrazorV publishing instructions, README banner,
 development ignores, this provenance note, and a GHCR workflow that lowercases
 the repository owner, with its regression test and documentation. The renewal
